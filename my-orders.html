@@ -244,6 +244,7 @@
   }
 
   // 已登入：用 customerUid 從雲端撈訂單（跨裝置）
+  // 注意：只用 where 不用 orderBy（避免要建 composite index），改在 client 排序
   async function loadCloudOrders(user) {
     const $box = $("orders");
     $("historyTitle").textContent = `📦 ${user.displayName || user.email} 的訂單`;
@@ -251,8 +252,7 @@
     try {
       const q = query(
         collection(db, "webOrders"),
-        where("customerUid", "==", user.uid),
-        orderBy("createdAt", "desc")
+        where("customerUid", "==", user.uid)
       );
       const snap = await getDocs(q);
       if (snap.empty) {
@@ -263,7 +263,15 @@
         </div>`;
         return;
       }
-      $box.innerHTML = snap.docs.map(d => renderOrderCard(d.id, d.data())).join("");
+      // 客戶端按 createdAt 降序排
+      const docs = snap.docs
+        .map(d => ({ id: d.id, data: d.data() }))
+        .sort((a, b) => {
+          const ta = a.data.createdAt?.toMillis?.() || 0;
+          const tb = b.data.createdAt?.toMillis?.() || 0;
+          return tb - ta;
+        });
+      $box.innerHTML = docs.map(o => renderOrderCard(o.id, o.data)).join("");
     } catch (err) {
       console.error("載入訂單失敗", err);
       $box.innerHTML = `<div style="text-align:center;color:var(--muted);padding:30px">
