@@ -1,6 +1,6 @@
 // =====================================================
-// 果果家 KOKOYA · 購物網前端 Firebase 設定（公開讀取）
-// 與後台共用同一個 Firebase 專案，但只用得到讀 items + 寫 webOrders
+// 果果家 KOKOYA · 購物網前端 Firebase 設定（公開讀寫指定 collection）
+// 與後台共用同一個 Firebase 專案，但只用得到讀 items + settings、寫 webOrders
 // =====================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
 import {
@@ -8,8 +8,10 @@ import {
   collection,
   doc,
   addDoc,
+  getDoc,
   getDocs,
   query,
+  where,
   orderBy,
   serverTimestamp,
   Timestamp
@@ -27,4 +29,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 
-export { db, collection, doc, addDoc, getDocs, query, orderBy, serverTimestamp, Timestamp };
+export {
+  db, collection, doc,
+  addDoc, getDoc, getDocs, query, where, orderBy,
+  serverTimestamp, Timestamp
+};
