@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>水果小教室 · 果果家 KOKOYA</title>
+<link rel="icon" href="assets/logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=Noto+Serif+TC:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/shop.css">
+<style>
+  .article-wrap {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 30px 22px 60px;
+  }
+  .art-cover {
+    aspect-ratio: 16/8;
+    background: linear-gradient(135deg, #FFEFD9, #FBE0C2);
+    border-radius: var(--r-md);
+    overflow: hidden;
+    display: grid; place-items: center;
+    font-size: 6.5rem;
+    margin-bottom: 22px;
+    box-shadow: var(--shadow-sm);
+  }
+  .art-cover img { width: 100%; height: 100%; object-fit: cover; }
+  .art-cat-tag {
+    display: inline-block;
+    background: var(--orange-l);
+    color: var(--orange-d);
+    padding: 4px 14px;
+    border-radius: var(--r-pill);
+    font-size: .82rem;
+    margin-bottom: 12px;
+    border: 1px solid var(--orange);
+  }
+  .art-title {
+    font-size: 2.2rem;
+    line-height: 1.4;
+    color: var(--ink-1);
+    margin-bottom: 6px;
+    font-family: "Noto Serif TC", serif;
+    letter-spacing: .04em;
+  }
+  .art-excerpt {
+    font-size: 1.05rem;
+    color: var(--ink-3);
+    line-height: 1.8;
+    margin-bottom: 26px;
+    padding-bottom: 18px;
+    border-bottom: 1px dashed var(--line);
+  }
+
+  .art-tips {
+    background: linear-gradient(135deg, #FFF6E6, #FBE0C2);
+    border: 1px solid var(--line);
+    border-left: 5px solid var(--orange);
+    border-radius: var(--r-md);
+    padding: 16px 22px;
+    margin: 22px 0;
+  }
+  .art-tips h4 {
+    margin: 0 0 8px;
+    font-size: 1rem;
+    color: var(--ink-1);
+    letter-spacing: .1em;
+    font-family: "Noto Serif TC", serif;
+  }
+  .art-tips ul { margin: 0; padding-left: 20px; }
+  .art-tips li {
+    color: var(--ink-2);
+    line-height: 1.9;
+    font-size: .94rem;
+  }
+
+  .art-body {
+    color: var(--ink-1);
+    font-size: 1.04rem;
+    line-height: 1.95;
+    letter-spacing: .04em;
+  }
+  .art-body h1 { font-size: 1.75rem; margin: 36px 0 14px; color: var(--ink-1); font-family: "Noto Serif TC", serif; letter-spacing: .08em; }
+  .art-body h2 {
+    font-size: 1.45rem;
+    margin: 32px 0 14px;
+    color: var(--ink-1);
+    font-family: "Noto Serif TC", serif;
+    letter-spacing: .08em;
+    padding-bottom: 8px;
+    border-bottom: 2px solid var(--orange-l);
+  }
+  .art-body h3 { font-size: 1.2rem; margin: 22px 0 10px; color: var(--orange-d); font-family: "Noto Serif TC", serif; }
+  .art-body p { margin: 12px 0; }
+  .art-body strong { color: var(--orange-d); font-weight: 700; }
+  .art-body em { color: var(--leaf-d); font-style: normal; font-weight: 600; }
+  .art-body code { background: var(--paper-2); padding: 2px 8px; border-radius: 4px; color: var(--orange-d); font-size: .94em; }
+  .art-body ul { margin: 14px 0; padding-left: 24px; }
+  .art-body li { margin: 6px 0; line-height: 1.8; }
+  .art-body blockquote {
+    border-left: 4px solid var(--leaf);
+    background: var(--paper-2);
+    padding: 12px 18px;
+    margin: 18px 0;
+    color: var(--ink-2);
+    border-radius: 0 var(--r-md) var(--r-md) 0;
+    font-style: italic;
+  }
+  .art-body a { color: var(--orange-d); text-decoration: underline; }
+
+  .nav-btns {
+    display: flex; gap: 12px;
+    margin-top: 50px;
+    padding-top: 26px;
+    border-top: 1px solid var(--line);
+    flex-wrap: wrap;
+  }
+  @media (max-width: 480px) {
+    .art-title { font-size: 1.7rem; }
+    .art-cover { font-size: 5rem; }
+  }
+</style>
+</head>
+<body id="top">
+
+<header class="topbar">
+  <div class="inner">
+    <a href="index.html" class="brand">
+      <img src="assets/logo.png" alt="果果家">
+      <div>
+        果果家
+        <span class="en">KOKOYA</span>
+      </div>
+    </a>
+    <nav class="nav" id="mainNav">
+      <a href="index.html">首頁</a>
+      <a href="index.html#season">當季水果</a>
+      <a href="index.html#products">水果禮盒</a>
+      <a href="blog.html">水果小教室</a>
+      <a href="index.html#brand">品牌故事</a>
+      <a href="my-orders.html">我的訂單</a>
+    </nav>
+    <button class="menu-toggle" id="menuToggle" aria-label="選單">☰</button>
+    <div id="authSlot" class="auth-slot"></div>
+    <a href="index.html" class="cta-buy">🍎 去逛逛</a>
+  </div>
+</header>
+
+<main class="article-wrap">
+  <div id="articleContent">
+    <div style="text-align:center;padding:80px;color:var(--muted)">載入中…</div>
+  </div>
+
+  <div class="nav-btns">
+    <a href="blog.html" class="btn outline">← 回小教室列表</a>
+    <a href="index.html" class="btn primary" style="margin-left:auto">🛒 去選購水果</a>
+  </div>
+</main>
+
+<footer class="footer">
+  <div class="container">
+    <div class="copy">© 2026 果果家 KOKOYA. All Rights Reserved.</div>
+  </div>
+</footer>
+
+<script type="module">
+  import { db, collection, query, where, getDocs, getDoc, doc } from "./js/firebase-shop.js";
+  import { renderMarkdown } from "./js/markdown.js";
+  import { renderAuthButton } from "./js/auth.js";
+
+  const $ = id => document.getElementById(id);
+
+  // 取 ?slug= 或 ?id=
+  const url = new URL(location.href);
+  const slug = url.searchParams.get("slug");
+  const id   = url.searchParams.get("id");
+
+  async function load() {
+    let article = null;
+    try {
+      if (slug) {
+        const snap = await getDocs(query(collection(db, "articles"), where("slug", "==", slug)));
+        if (!snap.empty) article = { id: snap.docs[0].id, ...snap.docs[0].data() };
+      } else if (id) {
+        const s = await getDoc(doc(db, "articles", id));
+        if (s.exists()) article = { id: s.id, ...s.data() };
+      }
+    } catch (err) {
+      console.error("載入失敗", err);
+      $("articleContent").innerHTML = `<div style="text-align:center;padding:60px;color:var(--ink-3)">
+        載入失敗：${err.message}
+      </div>`;
+      return;
+    }
+
+    if (!article) {
+      $("articleContent").innerHTML = `
+        <div style="text-align:center;padding:60px;color:var(--ink-3)">
+          <div style="font-size:3rem">🍃</div>
+          找不到這篇文章<br>
+          <a href="blog.html" style="color:var(--orange-d)">回到小教室列表</a>
+        </div>`;
+      return;
+    }
+
+    document.title = `${article.title} · 水果小教室 · 果果家`;
+
+    const tipsHtml = article.tips
+      ? `<div class="art-tips">
+          <h4>🎯 挑選重點</h4>
+          <ul>${article.tips.split(/\r?\n/).filter(Boolean).map(t => `<li>${escapeHtml(t.trim())}</li>`).join("")}</ul>
+         </div>`
+      : "";
+
+    const coverHtml = article.cover
+      ? `<img src="${article.cover}" alt="${article.title}" onerror="this.style.display='none';this.parentElement.innerHTML+='<span style=&quot;font-size:6.5rem&quot;>${article.icon||'📚'}</span>'">`
+      : `<span>${article.icon || "📚"}</span>`;
+
+    $("articleContent").innerHTML = `
+      <div class="art-cover">${coverHtml}</div>
+      ${article.category ? `<span class="art-cat-tag">${article.category}</span>` : ""}
+      <h1 class="art-title">${article.title}</h1>
+      ${article.excerpt ? `<p class="art-excerpt">${escapeHtml(article.excerpt)}</p>` : ""}
+      ${tipsHtml}
+      <div class="art-body">${renderMarkdown(article.body || "")}</div>
+    `;
+  }
+
+  function escapeHtml(s) {
+    return (s || "").replace(/[&<>"']/g, c => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  $("menuToggle")?.addEventListener("click", () => $("mainNav").classList.toggle("show"));
+  renderAuthButton($("authSlot"));
+  load();
+</script>
+</body>
+</html>

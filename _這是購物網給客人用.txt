@@ -1,0 +1,13 @@
+這個資料夾是「客人逛的購物網」，給來買水果的客戶使用，不需要登入。
+
+對應的 GitHub repo 建議名稱：kokoya-shop（或你已經建立的那個購物網 repo）
+
+裡面有：
+- index.html (購物網主頁：hero / 商品 / 分類 / 結帳)
+- css/shop.css (購物網樣式)
+- js/firebase-shop.js (Firebase 公開讀取設定)
+- js/shop.js (商品載入 / 購物車 / 結帳邏輯)
+- assets/ (LOGO + FB QR)
+
+⚠️ 不要把這個資料夾的東西推到「後台」repo
+⚠️ 員工用的後台在 KOKOYA/上傳GitHub/

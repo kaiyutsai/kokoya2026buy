@@ -1,40 +1,53 @@
 // =====================================================
 // 果果家 KOKOYA · 購物網前端主邏輯
-// 串 Firestore 撈 items / 購物車 / 送單 → webOrders
+// 串 Firestore 撈 items / 購物車 / 線上轉帳結帳 → webOrders
 // =====================================================
 import {
-  db, collection, doc, addDoc, getDocs, query, orderBy, serverTimestamp, Timestamp
+  db, collection, doc, addDoc, getDoc, getDocs,
+  query, orderBy, serverTimestamp, Timestamp
 } from "./firebase-shop.js";
+import { renderAuthButton, getCurrentUser, onAuthChange, getProfile, saveProfile } from "./auth.js";
 
 const $ = id => document.getElementById(id);
 const fmtMoney = v => "$" + (Math.round(Number(v) || 0)).toLocaleString();
 
-// 依品項名稱猜 emoji（沒有圖片時的視覺）
+// 沒設定 imageUrl 時的 emoji fallback（涵蓋台灣常見水果）
 const EMOJI_MAP = [
-  [/蘋果|apple/i,        "🍎"],
-  [/橘|柑/,               "🍊"],
-  [/梨/,                  "🍐"],
-  [/葡萄/,                "🍇"],
-  [/草莓/,                "🍓"],
-  [/奇異果|kiwi/i,        "🥝"],
-  [/香蕉/,                "🍌"],
-  [/桃/,                  "🍑"],
-  [/西瓜/,                "🍉"],
-  [/鳳梨/,                "🍍"],
-  [/芒果/,                "🥭"],
-  [/檸檬/,                "🍋"],
-  [/櫻桃/,                "🍒"],
-  [/藍莓/,                "🫐"],
-  [/瓜/,                  "🍈"],
-  [/禮盒|綜合/,           "🎁"],
+  [/蘋果|apple/i,         "🍎"],
+  [/橘|柑/,                "🍊"],
+  [/梨/,                   "🍐"],
+  [/葡萄/,                 "🍇"],
+  [/草莓/,                 "🍓"],
+  [/奇異果|kiwi/i,         "🥝"],
+  [/香蕉/,                 "🍌"],
+  [/桃/,                   "🍑"],
+  [/西瓜/,                 "🍉"],
+  [/鳳梨/,                 "🍍"],
+  [/芒果/,                 "🥭"],
+  [/檸檬|萊姆/,            "🍋"],
+  [/櫻桃/,                 "🍒"],
+  [/藍莓/,                 "🫐"],
+  [/釋迦/,                 "🍏"],   // 釋迦（綠色佛果）
+  [/火龍果/,               "🐉"],
+  [/蓮霧/,                 "🔔"],
+  [/楊桃/,                 "⭐"],
+  [/木瓜/,                 "🥭"],
+  [/芭樂|番石榴/,          "🍏"],
+  [/百香果/,               "🟣"],
+  [/柚子|文旦/,            "🍊"],
+  [/椰子/,                 "🥥"],
+  [/棗/,                   "🌰"],
+  [/瓜/,                   "🍈"],
+  [/禮盒|綜合/,            "🎁"],
 ];
 function emojiOf(name) {
-  for (const [re, e] of EMOJI_MAP) if (re.test(name)) return e;
+  for (const [re, e] of EMOJI_MAP) if (re.test(name || "")) return e;
   return "🍎";
 }
 
 const state = {
   items: [],
+  payment: null,
   cart: JSON.parse(localStorage.getItem("kokoya_cart") || "{}"),
   catFilter: ""
 };
@@ -57,17 +70,58 @@ async function loadItems() {
     const snap = await getDocs(query(collection(db, "items"), orderBy("name")));
     state.items = snap.docs
       .map(d => ({ id: d.id, ...d.data() }))
-      .filter(i => Number(i.price) > 0);   // 只顯示有定價的商品
+      .filter(i => i.visible !== false);   // 後台沒勾「上架」的不顯示
     renderProducts();
   } catch (err) {
     console.error("載入商品失敗:", err);
+    const isPermission = /permission|denied/i.test(err.message);
     $("productList").innerHTML = `
-      <div style="grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--ink-3)">
-        <div style="font-size:2.4rem;margin-bottom:8px">😢</div>
-        商品載入失敗，請確認網路或稍後再試
-        <div style="font-size:.8rem;margin-top:8px;color:var(--muted)">${err.message}</div>
+      <div class="load-error">
+        <div class="ico">${isPermission ? "🔐" : "😢"}</div>
+        <div class="title">${isPermission ? "資料庫權限尚未開啟" : "商品載入失敗"}</div>
+        <div style="margin:8px 0 12px">${isPermission
+          ? "請後台管理員到 Firebase Console → Firestore → 規則，把 <code>firestore.rules</code> 的最新版本貼上並發布。<br>必須包含 <code>match /items: allow read: if true</code>"
+          : "請確認網路後重新整理"}</div>
+        <div style="font-size:.78rem;color:var(--muted)">技術細節：${err.message}</div>
       </div>`;
   }
+}
+
+async function loadPayment() {
+  try {
+    const s = await getDoc(doc(db, "settings", "payment"));
+    state.payment = s.exists() ? s.data() : null;
+  } catch (err) {
+    console.warn("付款資訊載入失敗", err);
+    state.payment = null;
+  }
+  renderPayment();
+}
+
+function renderPayment() {
+  const $p = $("paymentRows");
+  if (!$p) return;
+  const p = state.payment;
+  if (!p || !p.bankAccount) {
+    $p.innerHTML = `
+      <div style="padding:6px 0;color:var(--muted);font-size:.86rem">
+        ⚠️ 老闆還沒設定銀行帳號，<br>送單後我們會用 FB 訊息告訴您
+      </div>`;
+    return;
+  }
+  $p.innerHTML = `
+    ${p.bankName  ? `<div class="row"><span class="lbl">銀行</span><span class="val">${p.bankName}</span></div>` : ""}
+    ${p.bankCode  ? `<div class="row"><span class="lbl">代碼</span><span class="val">${p.bankCode}</span></div>` : ""}
+    ${p.accountName ? `<div class="row"><span class="lbl">戶名</span><span class="val">${p.accountName}</span></div>` : ""}
+    <div class="row"><span class="lbl">帳號</span><span class="val copy" data-copy="${p.bankAccount}" title="點一下複製">${p.bankAccount}</span></div>
+    ${p.note ? `<div class="row" style="margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)"><span class="lbl">備註</span><span class="val" style="font-weight:400">${p.note}</span></div>` : ""}
+  `;
+  $p.querySelectorAll("[data-copy]").forEach(el => {
+    el.addEventListener("click", () => {
+      navigator.clipboard?.writeText(el.dataset.copy);
+      toast("✓ 已複製帳號", "ok");
+    });
+  });
 }
 
 function renderProducts() {
@@ -80,30 +134,41 @@ function renderProducts() {
   }
   if (!list.length) {
     $("productList").innerHTML = `
-      <div style="grid-column:1/-1;text-align:center;padding:50px 20px;color:var(--ink-3)">
-        ${state.catFilter ? `「${state.catFilter}」目前沒有商品` : "目前沒有商品"}
+      <div class="load-error">
+        <div class="ico">🍃</div>
+        <div class="title">${state.catFilter ? `「${state.catFilter}」目前沒商品` : "目前沒有商品"}</div>
+        <div style="margin-top:6px;font-size:.88rem">${state.catFilter
+          ? `<a href="#" onclick="event.preventDefault();document.querySelector('[data-cat=\\'\\']')?.click()" style="color:var(--orange-d)">看全部商品 →</a>`
+          : "請後台管理員先新增品項並設定價格"}</div>
       </div>`;
     return;
   }
   $("productList").innerHTML = list.map(i => {
     const stock = Number(i.stock || 0);
+    const price = Number(i.price || 0);
     const out = stock <= 0;
+    const noPrice = price <= 0;
+    const disabled = out || noPrice;
+    const imgHtml = i.imageUrl
+      ? `<img src="${i.imageUrl}" alt="${i.name}" onerror="this.style.display='none';this.parentElement.innerHTML+='<span class=\\'emoji\\'>${emojiOf(i.name)}</span>'">`
+      : `<span class="emoji">${emojiOf(i.name)}</span>`;
     return `
       <div class="card-product">
         <div class="thumb">
-          ${out ? `<span class="badge sold">售完</span>` : (stock <= 5 ? `<span class="badge">最後${stock}${i.unit||""}</span>` : "")}
-          <span>${emojiOf(i.name)}</span>
+          ${out ? `<span class="badge sold">售完</span>`
+                 : (stock > 0 && stock <= 5 ? `<span class="badge">最後${stock}${i.unit||""}</span>` : "")}
+          ${imgHtml}
         </div>
         <div class="body">
-          <div class="name">${i.name}</div>
-          <div class="desc">${i.desc || i.category || "新鮮直送，當季嚴選"}</div>
+          <div class="name">${i.name || "(未命名)"}</div>
+          <div class="desc">${i.desc || i.category || "新鮮直送 · 當季嚴選"}</div>
           <div class="row">
             <div class="price">
-              <small>NT$</small>${fmtMoney(i.price).replace("$","")}
-              <span style="font-size:.7rem;color:var(--muted);font-weight:500">/${i.unit||"份"}</span>
+              ${noPrice ? `<span style="color:var(--muted);font-size:.88rem">未定價</span>`
+                       : `<small>NT$</small>${fmtMoney(price).replace("$","")}<span class="unit">/${i.unit||"份"}</span>`}
             </div>
-            <button class="btn-cart" data-add="${i.id}" ${out ? "disabled" : ""} title="${out ? "售完" : "加入購物車"}">
-              ${out ? "—" : "🛒"}
+            <button class="btn-cart" data-add="${i.id}" ${disabled ? "disabled" : ""} title="${out ? "售完" : noPrice ? "未定價" : "加入購物車"}">
+              ${disabled ? "—" : "🛒"}
             </button>
           </div>
         </div>
@@ -120,7 +185,8 @@ function addToCart(itemId) {
     qty: cur.qty + 1,
     name: item.name,
     unit: item.unit || "份",
-    price: Number(item.price) || 0
+    price: Number(item.price) || 0,
+    imageUrl: item.imageUrl || ""
   };
   persist();
   toast(`✓ ${item.name} 加入購物車`, "ok");
@@ -154,24 +220,28 @@ function renderCart() {
       </div>`;
     return;
   }
-  $("cartBody").innerHTML = entries.map(([id, v]) => `
-    <div class="cart-item">
-      <div class="ph">${emojiOf(v.name)}</div>
-      <div class="info">
-        <div class="nm">${v.name}</div>
-        <div class="pr">${fmtMoney(v.price)} / ${v.unit}</div>
-        <div class="qty-box">
-          <button data-dec="${id}">−</button>
-          <span class="n">${v.qty}</span>
-          <button data-inc="${id}">＋</button>
-          <span style="margin-left:auto;font-size:.86rem;color:var(--ink-2);font-weight:600">
-            ${fmtMoney(v.qty * v.price)}
-          </span>
+  $("cartBody").innerHTML = entries.map(([id, v]) => {
+    const imgHtml = v.imageUrl
+      ? `<img src="${v.imageUrl}" alt="" onerror="this.style.display='none';this.parentElement.textContent='${emojiOf(v.name)}'">`
+      : emojiOf(v.name);
+    return `
+      <div class="cart-item">
+        <div class="ph">${imgHtml}</div>
+        <div class="info">
+          <div class="nm">${v.name}</div>
+          <div class="pr">${fmtMoney(v.price)} / ${v.unit}</div>
+          <div class="qty-box">
+            <button data-dec="${id}">−</button>
+            <span class="n">${v.qty}</span>
+            <button data-inc="${id}">＋</button>
+            <span style="margin-left:auto;font-size:.88rem;color:var(--ink-2);font-weight:600">
+              ${fmtMoney(v.qty * v.price)}
+            </span>
+          </div>
         </div>
-      </div>
-      <button class="rm" data-rm="${id}" title="移除">✕</button>
-    </div>
-  `).join("");
+        <button class="rm" data-rm="${id}" title="移除">✕</button>
+      </div>`;
+  }).join("");
 }
 
 // ============= Cart drawer 開關 =============
@@ -182,12 +252,10 @@ $("btnOpenCart").addEventListener("click", openCart);
 $("btnCloseCart").addEventListener("click", closeCart);
 $("cartMask").addEventListener("click", closeCart);
 
-// 商品卡片點擊：加入購物車
 $("productList").addEventListener("click", e => {
   const id = e.target.closest("[data-add]")?.dataset.add;
   if (id) addToCart(id);
 });
-// 購物車 +/- / 移除
 $("cartBody").addEventListener("click", e => {
   const inc = e.target.closest("[data-inc]")?.dataset.inc;
   const dec = e.target.closest("[data-dec]")?.dataset.dec;
@@ -218,13 +286,20 @@ $("btnCheckout").addEventListener("click", () => {
   if (!entries.length) return toast("購物車是空的", "err");
   closeCart();
   $("checkoutModal").classList.add("show");
+  // 帶入順序：會員 profile > localStorage > 空
+  const saved = JSON.parse(localStorage.getItem("kokoya_customer") || "{}");
+  const fillName  = _profile?.name    || saved.name  || _profile?.displayName || "";
+  const fillPhone = _profile?.phone   || saved.phone || "";
+  const fillAddr  = _profile?.address || saved.addr  || "";
+  if (!$("cName").value)  $("cName").value  = fillName;
+  if (!$("cPhone").value) $("cPhone").value = fillPhone;
+  if (!$("cAddr").value)  $("cAddr").value  = fillAddr;
 });
 $("btnCancelCheckout").addEventListener("click", () => $("checkoutModal").classList.remove("show"));
 $("checkoutModal").addEventListener("click", e => {
   if (e.target === $("checkoutModal")) $("checkoutModal").classList.remove("show");
 });
 
-// 取貨方式切換 → 自取就隱藏地址欄
 $("cMethod").addEventListener("change", () => {
   const method = $("cMethod").value;
   $("addrField").style.display = method === "宅配" ? "block" : "none";
@@ -237,6 +312,7 @@ $("checkoutForm").addEventListener("submit", async e => {
   const method = $("cMethod").value;
   const addr   = $("cAddr").value.trim();
   const note   = $("cNote").value.trim();
+  const tlast5 = $("cTransferLast5").value.trim();
   if (!name || !phone) return toast("請填姓名與電話", "err");
   if (method === "宅配" && !addr) return toast("宅配請填地址", "err");
 
@@ -255,8 +331,9 @@ $("checkoutForm").addEventListener("submit", async e => {
   $btn.disabled = true;
   $btn.textContent = "送出中…";
 
+  const user = getCurrentUser();
   try {
-    await addDoc(collection(db, "webOrders"), {
+    const ref = await addDoc(collection(db, "webOrders"), {
       customer: name,
       phone,
       method,
@@ -264,16 +341,45 @@ $("checkoutForm").addEventListener("submit", async e => {
       note,
       lines,
       total,
-      status: "new",                       // new → confirmed → completed
+      paymentMethod: "transfer",
+      transferLast5: tlast5,
+      paymentStatus: tlast5 ? "pending_verify" : "awaiting_transfer",
+      status: "new",
       source: "web",
+      // 會員資訊（若已登入）
+      customerUid:   user?.uid   || null,
+      customerEmail: user?.email || "",
+      customerPhoto: user?.photoURL || "",
+      isMember:      !!user,
       createdAt: serverTimestamp()
     });
+
+    // 記錄到 localStorage 給「我的訂單」用
+    const myOrders = JSON.parse(localStorage.getItem("kokoya_my_orders") || "[]");
+    myOrders.unshift({ id: ref.id, phone, customer: name, total, at: Date.now() });
+    localStorage.setItem("kokoya_my_orders", JSON.stringify(myOrders.slice(0, 50)));
+    localStorage.setItem("kokoya_customer", JSON.stringify({ name, phone, addr }));
+
+    // 登入會員：把這次結帳填的資料回存到 profile（下次自動帶）
+    if (user) {
+      try {
+        await saveProfile(user.uid, {
+          name, phone,
+          address: method === "宅配" ? addr : (_profile?.address || "")
+        });
+        _profile = { ..._profile, name, phone, address: method === "宅配" ? addr : _profile?.address };
+      } catch (err) { console.warn("回存 profile 失敗", err); }
+    }
+
     state.cart = {};
     persist();
     $("checkoutModal").classList.remove("show");
     $("checkoutForm").reset();
     $("addrField").style.display = "block";
-    toast("✓ 訂單已送出，我們會盡快與您聯絡 🍊", "ok");
+
+    // 顯示成功 modal
+    $("successOrderNo").textContent = ref.id.slice(0, 8).toUpperCase();
+    $("successModal").classList.add("show");
   } catch (err) {
     console.error(err);
     toast("送出失敗：" + err.message, "err");
@@ -282,6 +388,66 @@ $("checkoutForm").addEventListener("submit", async e => {
   $btn.textContent = "送出訂單";
 });
 
+// 成功 modal 關閉
+$("btnSuccessClose")?.addEventListener("click", () => $("successModal").classList.remove("show"));
+$("successModal")?.addEventListener("click", e => {
+  if (e.target === $("successModal")) $("successModal").classList.remove("show");
+});
+
+// ============= 會員登入 UI =============
+renderAuthButton(document.getElementById("authSlot"));
+
+let _profile = null;
+
+// 登入狀態變動 → 抓 profile 暫存，結帳時自動帶入
+onAuthChange(async (user) => {
+  if (user) {
+    try {
+      _profile = await getProfile(user.uid);
+    } catch (err) { console.warn("讀取會員資料失敗", err); }
+  } else {
+    _profile = null;
+  }
+});
+
+// ============= 水果小教室預覽（3 篇最新文章） =============
+async function loadBlogPreview() {
+  try {
+    const snap = await getDocs(query(collection(db, "articles"), orderBy("order", "asc")));
+    const list = snap.docs
+      .map(d => ({ id: d.id, ...d.data() }))
+      .filter(a => a.published !== false)
+      .slice(0, 3);
+    if (!list.length) return;
+    const $sec = $("blogTeaser");
+    const $box = $("blogPreview");
+    $box.innerHTML = list.map(a => {
+      const slug = a.slug || a.id;
+      const cover = a.cover
+        ? `<img src="${a.cover}" alt="${a.title}" style="width:100%;height:100%;object-fit:cover" onerror="this.outerHTML='<span style=&quot;font-size:3.5rem&quot;>${a.icon||'📚'}</span>'">`
+        : `<span style="font-size:3.5rem">${a.icon || "📚"}</span>`;
+      return `
+        <a class="card-product" href="blog-detail.html?slug=${encodeURIComponent(slug)}" style="text-decoration:none;color:inherit">
+          <div class="thumb">${a.category ? `<span class="badge new">${a.category}</span>` : ""}${cover}</div>
+          <div class="body">
+            <div class="name">${a.title || "(無標題)"}</div>
+            <div class="desc">${a.excerpt || ""}</div>
+            <div class="row" style="border-top-color:transparent;padding-top:8px">
+              <span class="muted" style="font-size:.84rem">📖 閱讀 →</span>
+              <span></span>
+            </div>
+          </div>
+        </a>`;
+    }).join("");
+    $sec.style.display = "block";
+  } catch (err) {
+    // 沒文章不顯示這一塊就好，不要報錯
+    console.warn("載入文章預覽失敗", err);
+  }
+}
+
 // ============= 啟動 =============
 loadItems();
+loadPayment();
+loadBlogPreview();
 renderCart();

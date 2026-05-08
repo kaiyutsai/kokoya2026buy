@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=Noto+Serif+TC:wght@500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/shop.css">
 </head>
-<body>
+<body id="top">
 
 <!-- ============= Top Bar ============= -->
 <header class="topbar">
@@ -23,14 +23,17 @@
     </a>
 
     <nav class="nav" id="mainNav">
-      <a href="#home">首頁</a>
+      <a href="#top" class="active">首頁</a>
       <a href="#season">當季水果</a>
       <a href="#products">水果禮盒</a>
+      <a href="blog.html">水果小教室</a>
       <a href="#brand">品牌故事</a>
-      <a href="#contact">聯絡我們</a>
+      <a href="my-orders.html">我的訂單</a>
     </nav>
 
     <button class="menu-toggle" id="menuToggle" aria-label="選單">☰</button>
+
+    <div id="authSlot" class="auth-slot"></div>
 
     <button class="cta-buy" id="btnOpenCart">
       🛒 立即選購 <span class="badge-cnt" id="cartCount"></span>
@@ -39,18 +42,20 @@
 </header>
 
 <!-- ============= Hero ============= -->
-<section id="home" class="hero">
+<section class="hero">
   <div class="container">
     <div class="hero-inner">
       <div>
         <h1>新鮮水果，<br>送進每一個家的<span class="accent">甜美日常</span></h1>
         <p class="lead">嚴選當季新鮮 · 產地直送 · 安心配送</p>
         <div class="hero-cta">
-          <a href="#products" class="btn primary">🛒 選購水果</a>
+          <a href="#products" class="btn primary">🍎 選購水果</a>
           <a href="#products" class="btn outline">查看禮盒</a>
         </div>
       </div>
-      <div class="hero-image" aria-hidden="true"></div>
+      <div class="hero-image" aria-hidden="true">
+        <img class="hero-mascot" src="assets/logo.png" alt="">
+      </div>
     </div>
 
     <!-- 三大特色 -->
@@ -85,7 +90,7 @@
   <div class="container">
     <div class="section-head">
       <h2>人氣水果推薦</h2>
-      <div class="sub">本季最熱賣，挑選最甜美的</div>
+      <div class="sub">本季最熱賣 · 挑選最甜美的</div>
     </div>
     <div class="products" id="productList">
       <!-- skeleton -->
@@ -98,11 +103,11 @@
 </section>
 
 <!-- ============= 當季分類 ============= -->
-<section id="season" class="section" style="background:var(--bg-2)">
+<section id="season" class="section alt">
   <div class="container">
     <div class="section-head">
       <h2>本月當季水果</h2>
-      <div class="sub">點選分類，看當季最新</div>
+      <div class="sub">點選分類 · 看當季最新</div>
     </div>
     <div class="cats" id="catList">
       <div class="cat" data-cat="蘋果"><div class="circle red">🍎</div><div class="name">蘋果</div></div>
@@ -111,6 +116,23 @@
       <div class="cat" data-cat="葡萄"><div class="circle purple">🍇</div><div class="name">葡萄</div></div>
       <div class="cat" data-cat="草莓"><div class="circle red">🍓</div><div class="name">草莓</div></div>
       <div class="cat" data-cat="奇異果"><div class="circle yellow">🥝</div><div class="name">奇異果</div></div>
+      <div class="cat" data-cat=""><div class="circle">🛒</div><div class="name">看全部</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============= 水果小教室預覽 ============= -->
+<section id="blogTeaser" class="section" style="display:none">
+  <div class="container">
+    <div class="section-head">
+      <h2>水果小教室</h2>
+      <div class="sub">挑水果不踩雷 · 保存有訣竅</div>
+    </div>
+    <div class="products" id="blogPreview" style="grid-template-columns:repeat(3, 1fr)">
+      <!-- JS 填入 3 篇最新文章 -->
+    </div>
+    <div style="text-align:center;margin-top:30px">
+      <a href="blog.html" class="btn outline">看全部小教室文章 →</a>
     </div>
   </div>
 </section>
@@ -119,7 +141,8 @@
 <section id="brand" class="section">
   <div class="container">
     <div class="brand-block">
-      <h2>果果家，分享來自大地的美好與溫暖 🍃</h2>
+      <img class="mascot" src="assets/logo.png" alt="果果家">
+      <h2>果果家，分享來自大地的美好與溫暖</h2>
       <p>用心挑選每一顆水果，讓新鮮與幸福，隨伴您與家人的每一天 ❤️</p>
     </div>
   </div>
@@ -131,13 +154,13 @@
     <div class="grid">
       <div>
         <a class="brand" href="#top">
-          <img src="assets/logo.png" alt="果果家" style="width:48px;height:48px">
+          <img src="assets/logo.png" alt="果果家" style="width:54px;height:54px">
           <div>
             果果家
             <span class="en">KOKOYA</span>
           </div>
         </a>
-        <p style="font-size:.86rem;color:var(--ink-3);margin-top:10px;line-height:1.6">
+        <p style="font-size:.86rem;color:var(--ink-3);margin-top:12px;line-height:1.7">
           家裡的小水果攤，<br>新鮮直送，溫暖到家 🌿
         </p>
       </div>
@@ -147,7 +170,7 @@
           <li><a href="#products">瀏覽水果</a></li>
           <li><a href="#contact">付款方式</a></li>
           <li><a href="#contact">配送說明</a></li>
-          <li><a href="#contact">退換貨政策</a></li>
+          <li><a href="my-orders.html">查訂單</a></li>
         </ul>
       </div>
       <div>
@@ -225,15 +248,32 @@
       </div>
       <div class="field">
         <label>取貨方式</label>
-        <select id="cMethod" style="width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--bg-2);font-family:inherit;font-size:.94rem">
+        <select id="cMethod">
           <option value="宅配">宅配到府</option>
           <option value="自取">自取</option>
         </select>
       </div>
       <div class="field" id="addrField">
-        <label>送貨地址</label>
+        <label>送貨地址 *</label>
         <input id="cAddr" placeholder="例：高雄市鳳山區中山路 100 號">
       </div>
+
+      <!-- 線上轉帳資訊 -->
+      <div class="field">
+        <label>付款方式</label>
+        <div class="payment-info" id="paymentInfo">
+          <div class="ttl">💳 線上轉帳</div>
+          <div id="paymentRows" style="font-size:.88rem;color:var(--ink-3)">
+            載入中…
+          </div>
+        </div>
+      </div>
+      <div class="field">
+        <label>匯款帳號末 5 碼（轉帳後再填回來通知我們對帳）</label>
+        <input id="cTransferLast5" placeholder="例：12345" maxlength="5" inputmode="numeric">
+        <div style="font-size:.78rem;color:var(--muted);margin-top:4px">先送單也可以，匯款後再透過 FB 訊息告訴我們末 5 碼</div>
+      </div>
+
       <div class="field">
         <label>備註（選填）</label>
         <textarea id="cNote" placeholder="特殊需求、配送時間…"></textarea>
@@ -243,6 +283,29 @@
         <button type="submit" class="btn primary" style="flex:1.4">送出訂單</button>
       </div>
     </form>
+  </div>
+</div>
+
+<!-- ============= Success Modal ============= -->
+<div class="modal-mask" id="successModal">
+  <div class="modal">
+    <div class="success-block">
+      <div class="big">🎉</div>
+      <h3 style="margin-bottom:6px">訂單已送出！</h3>
+      <p style="color:var(--ink-3);margin:6px 0 8px">
+        我們會盡快與您聯絡確認 🍊
+      </p>
+      <div>訂單編號</div>
+      <div class="order-no" id="successOrderNo">—</div>
+      <p style="color:var(--ink-3);font-size:.86rem;margin-top:12px;line-height:1.7">
+        請到「我的訂單」用<br>
+        <b>電話 + 訂單編號</b>查詢進度
+      </p>
+      <div style="display:flex;gap:10px;margin-top:18px;justify-content:center">
+        <button type="button" class="btn outline" id="btnSuccessClose">繼續逛逛</button>
+        <a href="my-orders.html" class="btn primary">查看訂單</a>
+      </div>
+    </div>
   </div>
 </div>
 

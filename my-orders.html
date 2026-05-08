@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>我的訂單 · 果果家 KOKOYA</title>
+<link rel="icon" href="assets/logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&family=Noto+Serif+TC:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/shop.css">
+<style>
+  .order-card {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: 18px 20px;
+    margin-bottom: 14px;
+    box-shadow: var(--shadow-sm);
+  }
+  .order-card.new       { border-left: 5px solid var(--orange); }
+  .order-card.processing{ border-left: 5px solid var(--leaf); }
+  .order-card.completed { border-left: 5px solid var(--leaf-d); }
+  .order-card.cancelled { border-left: 5px solid var(--muted); opacity: .7; }
+  .order-h {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px; flex-wrap: wrap; gap: 8px;
+  }
+  .order-id {
+    font-family: "Noto Serif TC", monospace;
+    background: var(--paper-2);
+    padding: 4px 12px;
+    border-radius: var(--r-pill);
+    font-size: .86rem;
+    font-weight: 700;
+    border: 1px solid var(--line);
+  }
+  .order-status {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: var(--r-pill);
+    font-size: .82rem;
+    font-weight: 600;
+  }
+  .order-status.new        { background: #FBE0C2; color: #C97B4B; }
+  .order-status.processing { background: #DBE5CC; color: var(--leaf-d); }
+  .order-status.completed  { background: #C9D5B7; color: var(--leaf-d); }
+  .order-status.cancelled  { background: #E0CDAA; color: var(--ink-2); }
+  .order-meta { font-size: .86rem; color: var(--ink-3); margin-bottom: 6px; }
+  .order-lines { font-size: .9rem; color: var(--ink-2); margin: 8px 0; line-height: 1.6; }
+  .order-total { font-size: 1.1rem; font-weight: 700; color: var(--tomato); margin-top: 6px; font-family: "Noto Serif TC"; }
+
+  .find-form {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    padding: 22px 24px;
+    margin-bottom: 24px;
+  }
+  .find-form .row-fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 10px;
+    align-items: end;
+  }
+  .find-form input {
+    width: 100%;
+    padding: 11px 13px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-sm);
+    font-family: inherit;
+    font-size: .94rem;
+    background: #fff;
+  }
+  .find-form input:focus { outline: none; border-color: var(--orange); }
+  .find-form label { font-size: .9rem; color: var(--ink-2); margin-bottom: 4px; display: block; font-weight: 500; }
+  @media (max-width:640px) {
+    .find-form .row-fields { grid-template-columns: 1fr; }
+    .find-form button { width: 100%; }
+  }
+</style>
+</head>
+<body id="top">
+
+<header class="topbar">
+  <div class="inner">
+    <a href="index.html" class="brand">
+      <img src="assets/logo.png" alt="果果家">
+      <div>
+        果果家
+        <span class="en">KOKOYA</span>
+      </div>
+    </a>
+    <nav class="nav" id="mainNav">
+      <a href="index.html">首頁</a>
+      <a href="index.html#season">當季水果</a>
+      <a href="index.html#products">水果禮盒</a>
+      <a href="index.html#brand">品牌故事</a>
+      <a href="index.html#contact">聯絡我們</a>
+      <a href="my-orders.html" class="active">我的訂單</a>
+    </nav>
+    <button class="menu-toggle" id="menuToggle" aria-label="選單">☰</button>
+    <div id="authSlot" class="auth-slot"></div>
+    <a href="index.html" class="cta-buy">🍎 繼續逛</a>
+  </div>
+</header>
+
+<main class="container" style="padding:40px 22px 60px">
+  <div class="section-head">
+    <h2>我的訂單</h2>
+    <div class="sub">用「電話 + 訂單編號末 8 碼」查詢</div>
+  </div>
+
+  <!-- 手動查詢 -->
+  <div class="find-form">
+    <div class="row-fields">
+      <div>
+        <label>聯絡電話</label>
+        <input id="qPhone" placeholder="0912-345-678" inputmode="tel">
+      </div>
+      <div>
+        <label>訂單編號末 8 碼</label>
+        <input id="qOrderId" placeholder="例：A1B2C3D4" maxlength="12">
+      </div>
+      <button class="btn primary" id="btnFind">🔍 查詢</button>
+    </div>
+  </div>
+
+  <!-- 登入提示（未登入才顯示） -->
+  <div id="loginPromo" style="background:linear-gradient(135deg,#FFF6E6,#FBE0C2);border:1px solid var(--line);border-radius:var(--r-md);padding:18px 22px;margin-bottom:18px;display:none">
+    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+      <div style="font-size:2rem">🔐</div>
+      <div style="flex:1;min-width:200px">
+        <div style="font-weight:700;color:var(--ink-1);margin-bottom:4px">用 Google 登入會員</div>
+        <div style="font-size:.86rem;color:var(--ink-3)">登入後訂單會自動同步到雲端，換手機也看得到</div>
+      </div>
+      <button class="btn primary" id="btnPromoLogin">🔐 Google 登入</button>
+    </div>
+  </div>
+
+  <!-- 會員資料卡（登入才顯示） -->
+  <div id="profileCard" style="background:var(--paper);border:1px solid var(--line);border-radius:var(--r-md);padding:20px 22px;margin-bottom:20px;display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+      <h3 style="margin:0;font-size:1.1rem;font-family:'Noto Serif TC';letter-spacing:.1em">👤 會員資料</h3>
+      <span class="muted" style="font-size:.82rem">資料會在結帳時自動帶入，不必每次重打</span>
+    </div>
+    <div class="find-form" style="margin:0;padding:0;border:none;background:none">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px">
+        <div>
+          <label>姓名</label>
+          <input id="pName" placeholder="例：王太太">
+        </div>
+        <div>
+          <label>聯絡電話</label>
+          <input id="pPhone" placeholder="0912-345-678" inputmode="tel">
+        </div>
+      </div>
+      <div style="margin-bottom:10px">
+        <label>常用地址（宅配用）</label>
+        <input id="pAddr" placeholder="例：高雄市鳳山區中山路 100 號">
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btn primary" id="btnSaveProfile">💾 儲存</button>
+        <span class="muted" id="profileMsg" style="font-size:.84rem"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 訂單清單 -->
+  <div id="historyBlock" style="margin-bottom:24px">
+    <h3 id="historyTitle" style="font-size:1.15rem;margin-bottom:12px;color:var(--ink-2);font-family:'Noto Serif TC';letter-spacing:.1em">📦 我的訂單</h3>
+    <div id="orders">
+      <div style="text-align:center;color:var(--muted);padding:30px">載入中…</div>
+    </div>
+  </div>
+
+  <!-- 客服聯絡 -->
+  <div style="text-align:center;padding:20px;background:var(--paper);border-radius:var(--r-md);border:1px solid var(--line);margin-top:20px">
+    <p style="margin:0 0 10px;color:var(--ink-2)">有問題或要修改訂單？</p>
+    <a href="https://www.facebook.com/share/g/14cSCPrgFQJ/" target="_blank" rel="noopener" class="btn outline">
+      📘 FB 訊息聯絡老闆
+    </a>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script type="module">
+  import { db, doc, getDoc, getDocs, collection, query, where, orderBy } from "./js/firebase-shop.js";
+  import { renderAuthButton, onAuthChange, loginWithGoogle, getProfile, saveProfile, getCurrentUser } from "./js/auth.js";
+
+  const $ = id => document.getElementById(id);
+  const fmtMoney = v => "$" + (Math.round(Number(v) || 0)).toLocaleString();
+
+  function toast(m, t = "ok") {
+    const $t = $("toast"); $t.textContent = m; $t.className = `toast ${t} show`;
+    setTimeout(() => $t.className = "toast", 2400);
+  }
+
+  const STATUS_TEXT = {
+    new:        "📨 已送出，等待老闆確認",
+    processing: "👨‍🍳 處理中（已建出貨單）",
+    completed:  "✅ 已完成",
+    cancelled:  "❌ 已取消"
+  };
+  const PAY_TEXT = {
+    awaiting_transfer: "⏳ 等待匯款",
+    pending_verify:    "🔍 對帳中",
+    paid:              "✅ 已收款"
+  };
+
+  function fmtDate(ts) {
+    if (!ts) return "—";
+    const d = ts.toDate ? ts.toDate() : new Date(ts);
+    return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,"0")}/${String(d.getDate()).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`;
+  }
+
+  function renderOrderCard(id, data) {
+    const status = data.status || "new";
+    const statusText = STATUS_TEXT[status] || status;
+    const payText    = PAY_TEXT[data.paymentStatus] || "";
+    const lines = (data.lines || []).map(l => `${l.name} × ${l.qty}${l.unit||""}`).join("、") || "—";
+    return `
+      <div class="order-card ${status}">
+        <div class="order-h">
+          <span class="order-id">#${id.slice(0,8).toUpperCase()}</span>
+          <span class="order-status ${status}">${statusText}</span>
+        </div>
+        <div class="order-meta">
+          ${fmtDate(data.createdAt)} · ${data.customer || "—"} · ${data.method || "—"}
+          ${payText ? `<br>付款狀態：${payText}` : ""}
+        </div>
+        <div class="order-lines">${lines}</div>
+        <div class="order-total">合計 ${fmtMoney(data.total)}</div>
+      </div>`;
+  }
+
+  async function fetchOrder(id) {
+    try {
+      const s = await getDoc(doc(db, "webOrders", id));
+      return s.exists() ? s.data() : null;
+    } catch (err) {
+      console.error("查單失敗", err);
+      return null;
+    }
+  }
+
+  // 已登入：用 customerUid 從雲端撈訂單（跨裝置）
+  async function loadCloudOrders(user) {
+    const $box = $("orders");
+    $("historyTitle").textContent = `📦 ${user.displayName || user.email} 的訂單`;
+    $box.innerHTML = `<div style="text-align:center;color:var(--muted);padding:30px">載入中…</div>`;
+    try {
+      const q = query(
+        collection(db, "webOrders"),
+        where("customerUid", "==", user.uid),
+        orderBy("createdAt", "desc")
+      );
+      const snap = await getDocs(q);
+      if (snap.empty) {
+        $box.innerHTML = `<div style="text-align:center;color:var(--muted);padding:30px;background:var(--paper);border:1px dashed var(--line);border-radius:var(--r-md)">
+          <div style="font-size:2.4rem">🍃</div>
+          還沒有訂購紀錄<br>
+          <a href="index.html" style="color:var(--orange-d)">去逛逛 →</a>
+        </div>`;
+        return;
+      }
+      $box.innerHTML = snap.docs.map(d => renderOrderCard(d.id, d.data())).join("");
+    } catch (err) {
+      console.error("載入訂單失敗", err);
+      $box.innerHTML = `<div style="text-align:center;color:var(--muted);padding:30px">
+        載入失敗：${err.message}<br>
+        <span style="font-size:.82rem">（可能是 firestore.rules 沒更新到允許會員讀自己的訂單）</span>
+      </div>`;
+    }
+  }
+
+  // 未登入：用 localStorage 撈這台裝置下單過的訂單
+  async function loadLocalOrders() {
+    const myOrders = JSON.parse(localStorage.getItem("kokoya_my_orders") || "[]");
+    const $box = $("orders");
+    $("historyTitle").textContent = "📦 在這個裝置下單過的訂單";
+    if (!myOrders.length) {
+      $box.innerHTML = `<div style="text-align:center;color:var(--muted);padding:30px;background:var(--paper);border:1px dashed var(--line);border-radius:var(--r-md)">
+        <div style="font-size:2.4rem">🍃</div>
+        這個裝置還沒有訂購紀錄<br>
+        <a href="index.html" style="color:var(--orange-d)">去逛逛 →</a>
+      </div>`;
+      return;
+    }
+    const results = await Promise.all(myOrders.map(async (o) => {
+      const data = await fetchOrder(o.id);
+      return data ? { id: o.id, data } : null;
+    }));
+    const valid = results.filter(Boolean);
+    if (!valid.length) {
+      $box.innerHTML = `<div style="text-align:center;color:var(--muted);padding:30px">
+        無法載入訂單（資料庫權限或網路問題）
+      </div>`;
+      return;
+    }
+    $box.innerHTML = valid.map(o => renderOrderCard(o.id, o.data)).join("");
+  }
+
+  // 手動查單
+  $("btnFind").addEventListener("click", async () => {
+    const phone = $("qPhone").value.trim();
+    const idIn  = $("qOrderId").value.trim();
+    if (!phone || !idIn) return toast("請填電話 + 訂單編號末 8 碼", "err");
+
+    // 找本機 cache 中匹配末 8 碼 + 電話的單
+    const myOrders = JSON.parse(localStorage.getItem("kokoya_my_orders") || "[]");
+    const found = myOrders.find(o =>
+      o.phone === phone && o.id.slice(0,8).toUpperCase() === idIn.toUpperCase()
+    );
+    if (!found) {
+      toast("這個裝置查無此訂單，請改用 FB 訊息詢問老闆", "err");
+      return;
+    }
+    const data = await fetchOrder(found.id);
+    if (!data) return toast("訂單載入失敗", "err");
+    if (data.phone !== phone) return toast("電話不符", "err");
+    $("orders").innerHTML = renderOrderCard(found.id, data);
+    document.getElementById("historyBlock").querySelector("h3").textContent = "🔍 查詢結果";
+  });
+
+  // 漢堡選單
+  $("menuToggle")?.addEventListener("click", () => $("mainNav").classList.toggle("show"));
+
+  // 登入按鈕
+  renderAuthButton($("authSlot"));
+
+  // 推銷登入按鈕
+  $("btnPromoLogin").addEventListener("click", async () => {
+    try { await loginWithGoogle(); } catch (err) {
+      if (err.code !== "auth/popup-closed-by-user") toast("登入失敗：" + err.message, "err");
+    }
+  });
+
+  // 監聽登入狀態 → 切換來源 + 載入會員資料
+  onAuthChange(async (user) => {
+    if (user) {
+      $("loginPromo").style.display = "none";
+      $("profileCard").style.display = "block";
+      // 帶入 profile 欄位
+      try {
+        const p = await getProfile(user.uid);
+        $("pName").value  = p?.name    || user.displayName || "";
+        $("pPhone").value = p?.phone   || "";
+        $("pAddr").value  = p?.address || "";
+      } catch (err) { console.warn(err); }
+      loadCloudOrders(user);
+    } else {
+      $("loginPromo").style.display = "block";
+      $("profileCard").style.display = "none";
+      loadLocalOrders();
+    }
+  });
+
+  // 儲存會員資料
+  $("btnSaveProfile").addEventListener("click", async () => {
+    const u = getCurrentUser();
+    if (!u) return toast("請先登入", "err");
+    try {
+      await saveProfile(u.uid, {
+        name:    $("pName").value.trim(),
+        phone:   $("pPhone").value.trim(),
+        address: $("pAddr").value.trim()
+      });
+      $("profileMsg").innerHTML = `<span style="color:var(--leaf-d)">✓ 已儲存</span>`;
+      setTimeout(() => $("profileMsg").textContent = "", 2500);
+      toast("✓ 會員資料已儲存", "ok");
+    } catch (err) {
+      toast("儲存失敗：" + err.message, "err");
+    }
+  });
+</script>
+</body>
+</html>
