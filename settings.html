@@ -1,0 +1,612 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>設定 · 果果家 KOKOYA</title>
+<link rel="icon" href="assets/logo-fallback.svg">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .lookup-list {
+    display: flex; flex-wrap: wrap; gap: 8px;
+    padding: 12px; background: #fff;
+    border: 1px solid var(--line); border-radius: var(--r-md);
+    min-height: 60px;
+  }
+  .lookup-list:empty::before {
+    content: "尚未建立，於下方輸入後按「＋ 新增」";
+    color: var(--ink-3); font-style: italic; align-self: center;
+  }
+  .lookup-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 8px 6px 14px;
+    background: var(--paper-2);
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    font-size: .9rem;
+  }
+  .lookup-pill button {
+    background: none; border: none; cursor: pointer;
+    color: var(--ink-3); font-size: 1rem; padding: 0 4px;
+    border-radius: 50%; line-height: 1;
+  }
+  .lookup-pill button:hover { color: var(--tomato); background: rgba(201,123,99,.1); }
+</style>
+</head>
+<body>
+<main class="container">
+  <div id="notAdmin" class="card hidden" style="text-align:center;padding:60px">
+    <h2>🔒 需要管理員權限</h2>
+    <p class="muted">這個頁面只有管理員（凱宇）能進入。</p>
+    <a href="dashboard.html" class="btn primary" style="margin-top:14px">回主控台</a>
+  </div>
+
+  <div id="adminPanel" class="hidden">
+    <div class="card">
+      <div class="card-h">
+        <h2>⚙️ 系統設定</h2>
+        <span class="muted" style="font-size:.85rem">這裡管理共用下拉清單，員工輸入時可以從這裡的選項挑</span>
+      </div>
+    </div>
+
+    <!-- 供應商 -->
+    <div class="card" style="margin-top:14px">
+      <div class="card-h"><h2>🏪 供應商</h2></div>
+      <p class="muted" style="font-size:.9rem;line-height:1.7;margin:0 0 14px">
+        在「進貨/庫存」開立進貨單時，供應商欄位會出現這裡的選項。仍可手動輸入新名稱。
+      </p>
+      <div id="supplierList" class="lookup-list"></div>
+      <div class="row-fields" style="margin-top:14px">
+        <input class="input" id="newSupplier" placeholder="例：崑山水果">
+        <button class="btn primary" id="btnAddSupplier" type="button">＋ 新增</button>
+      </div>
+    </div>
+
+    <!-- 配送員 -->
+    <div class="card" style="margin-top:14px">
+      <div class="card-h"><h2>🚚 配送員</h2></div>
+      <p class="muted" style="font-size:.9rem;line-height:1.7;margin:0 0 14px">
+        在「訂單批次」建批次時，配送員欄位會出現這裡的選項。
+      </p>
+      <div id="staffList" class="lookup-list"></div>
+      <div class="row-fields" style="margin-top:14px">
+        <input class="input" id="newStaff" placeholder="例：姸慧">
+        <button class="btn primary" id="btnAddStaff" type="button">＋ 新增</button>
+      </div>
+    </div>
+
+    <!-- API 金鑰 -->
+    <div class="card" style="margin-top:14px">
+      <div class="card-h"><h2>🔑 API 金鑰</h2></div>
+      <p class="muted" style="font-size:.9rem;line-height:1.7;margin:0 0 14px">
+        Gemini AI 解析訂單用的金鑰。<b>存在 Firestore 加密保護</b>，只有登入後的家人能讀取，不會出現在公開的 GitHub repo。<br>
+        到 <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--orange-deep)">Google AI Studio</a> 申請新金鑰，貼到下面儲存即可。
+      </p>
+      <div class="row-fields">
+        <div class="field" style="grid-column: 1 / -1">
+          <label>Gemini API 金鑰</label>
+          <div class="flex" style="gap:6px">
+            <input class="input" id="apiKeyInput" type="password" placeholder="AIzaSy... (貼在這裡)" style="flex:1">
+            <button class="btn ghost" type="button" id="btnToggleKey" title="顯示/隱藏">👁</button>
+            <button class="btn primary" type="button" id="btnSaveKey">💾 儲存</button>
+          </div>
+          <div id="keyStatus" class="muted" style="font-size:.85rem;margin-top:8px;line-height:1.5"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 銀行帳號（給購物網訂單顯示用） -->
+    <div class="card" style="margin-top:14px">
+      <div class="card-h"><h2>💳 銀行帳號（線上轉帳）</h2></div>
+      <p class="muted" style="font-size:.9rem;line-height:1.7;margin:0 0 14px">
+        客人在購物網結帳時會看到這個帳號。設定後購物網會自動同步顯示。<br>
+        <b>提醒：</b>這份資料是公開可讀的（任何訪客都能看到），請只放收款用的帳號。
+      </p>
+      <div class="row-fields">
+        <div class="field"><label>銀行名稱</label><input class="input" id="payBankName" placeholder="例：玉山銀行"></div>
+        <div class="field"><label>銀行代碼</label><input class="input" id="payBankCode" placeholder="例：808"></div>
+      </div>
+      <div class="row-fields">
+        <div class="field"><label>戶名</label><input class="input" id="payAccountName" placeholder="例：蔡凱宇"></div>
+        <div class="field"><label>帳號</label><input class="input" id="payBankAccount" placeholder="例：1234-5678-9012-345"></div>
+      </div>
+      <div class="field"><label>備註（選填）</label><textarea class="textarea" id="payNote" placeholder="例：請於 24 小時內匯款，逾時取消訂單"></textarea></div>
+      <div class="flex" style="justify-content:flex-end;gap:8px">
+        <button class="btn primary" type="button" id="btnSavePayment">💾 儲存銀行資訊</button>
+      </div>
+      <div id="paymentStatus" class="muted" style="font-size:.85rem;margin-top:8px"></div>
+    </div>
+
+    <!-- 水果大項分類 -->
+    <div class="card" style="margin-top:14px">
+      <div class="card-h"><h2>🍎 水果大項分類</h2></div>
+      <p class="muted" style="font-size:.9rem;line-height:1.7;margin:0 0 14px">
+        水果大項分類，用於品項清單、報表、銷售統計表的分組。<br>
+        這裡管理「分類」清單，到「品項清單」選擇分類後，<b>該品項就會歸類到這個大項底下</b>，點分類就能看屬於它的所有品項。
+      </p>
+      <div id="categoryList" class="lookup-list"></div>
+      <div class="row-fields" style="margin-top:14px">
+        <input class="input" id="newCategory" placeholder="例：蘋果類">
+        <button class="btn primary" id="btnAddCategory" type="button">＋ 新增</button>
+      </div>
+      <div id="catItemsBlock" class="hidden" style="margin-top:14px;padding:12px 14px;background:var(--paper-2);border-radius:var(--r-md);border:1px solid var(--line)">
+        <div style="font-weight:700;margin-bottom:6px">📦 「<span id="catItemsTitle"></span>」分類底下的品項</div>
+        <div id="catItemsList" style="font-size:.92rem;line-height:1.85;color:var(--ink-2)"></div>
+        <div style="margin-top:8px"><a href="items.html" class="muted" style="font-size:.84rem">→ 到品項清單修改分類歸屬</a></div>
+      </div>
+    </div>
+
+    <!-- 經辦人 -->
+    <div class="card" style="margin-top:14px">
+      <div class="card-h"><h2>👤 經辦人</h2></div>
+      <p class="muted" style="font-size:.9rem;line-height:1.7;margin:0 0 14px">
+        在「銷貨／進貨／出貨單」表單的「經辦人」下拉選單會出現這裡的選項。<br>
+        預設帶 4 位家人，可加入臨時幫手（例如阿嬤週末來幫忙）。
+      </p>
+      <div id="handlerList" class="lookup-list"></div>
+      <div class="row-fields" style="margin-top:14px">
+        <input class="input" id="newHandler" placeholder="例：凱宇">
+        <button class="btn primary" id="btnAddHandler" type="button">＋ 新增</button>
+      </div>
+    </div>
+
+    <!-- 系統資料總覽 -->
+    <div class="card" style="margin-top:14px">
+      <div class="card-h">
+        <h2>📊 系統資料總覽</h2>
+        <button class="btn ghost" type="button" id="btnReloadStats">🔄 重新載入</button>
+      </div>
+      <div id="statsBlock" class="muted" style="text-align:center;padding:20px">點上方「🔄 重新載入」開始查詢…</div>
+    </div>
+
+    <!-- 危險區 -->
+    <div class="card" style="margin-top:14px;border-color:#E8B4B4;background:#FFF7F2">
+      <div class="card-h"><h2 style="color:var(--tomato)">⚠️ 危險區</h2></div>
+      <p style="font-size:.92rem;line-height:1.7;color:var(--ink-2);margin:0 0 14px">
+        以下操作會<b>永久刪除</b>對應的全部資料，<b>無法復原</b>。每個動作都會要求你輸入特定文字確認。<br>
+        通常只在「測試完成想清空試打的單」、「重新開帳」這類情境用。
+      </p>
+      <div class="flex" style="flex-wrap:wrap;gap:8px">
+        <button class="btn" type="button" data-clear="batches"  >🗑 清空訂單批次</button>
+        <button class="btn" type="button" data-clear="sales"    >🗑 清空銷貨單</button>
+        <button class="btn" type="button" data-clear="purchases">🗑 清空進貨單</button>
+        <button class="btn" type="button" data-clear="shipments">🗑 清空出貨單</button>
+        <button class="btn" type="button" data-clear="items"    >🗑 清空品項主檔</button>
+        <button class="btn tomato" type="button" id="btnResetAll">🚨 重置交易資料（清空銷/進/出/批 + 品項庫存歸零）</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script type="module">
+  import { mountShell, toast, fmt, isAdmin } from "./js/app-shell.js";
+  import { getLookups, saveLookups, getDataStats, clearCollection, resetTransactionsAndStock,
+           getSecrets, saveSecrets, getPayment, savePayment, listItems } from "./js/data.js";
+  import { clearApiKeyCache } from "./js/ai-parse.js";
+
+  const me = await mountShell({ active: "settings" });
+
+  if (!isAdmin(me.email)) {
+    document.getElementById("notAdmin").classList.remove("hidden");
+  } else {
+    document.getElementById("adminPanel").classList.remove("hidden");
+    boot();
+  }
+
+  let lookups = { suppliers: [], deliveryStaff: [], handlers: [], categories: [] };
+  let allItems = [];   // 給「分類底下品項」清單用
+
+  async function boot() {
+    lookups = await getLookups();
+    allItems = await listItems().catch(() => []);
+    renderSuppliers();
+    renderStaff();
+    renderHandlers();
+    renderCategories();
+    bindDataPanel();
+    bindApiKeyPanel();
+    loadApiKey();
+    bindPaymentPanel();
+    loadPayment();
+  }
+
+  // ===== 銀行帳號 =====
+  function bindPaymentPanel() {
+    document.getElementById("btnSavePayment").addEventListener("click", async () => {
+      const $btn = document.getElementById("btnSavePayment");
+      $btn.disabled = true;
+      $btn.textContent = "儲存中…";
+      try {
+        await savePayment({
+          bankName:    document.getElementById("payBankName").value.trim(),
+          bankCode:    document.getElementById("payBankCode").value.trim(),
+          accountName: document.getElementById("payAccountName").value.trim(),
+          bankAccount: document.getElementById("payBankAccount").value.trim(),
+          note:        document.getElementById("payNote").value.trim()
+        });
+        document.getElementById("paymentStatus").innerHTML =
+          `<span style="color:var(--leaf-deep)">✓ 已儲存，購物網結帳頁會即時更新</span>`;
+        toast("✓ 銀行帳號已儲存", "ok");
+      } catch (err) {
+        toast("儲存失敗：" + err.message, "err");
+      }
+      $btn.disabled = false;
+      $btn.textContent = "💾 儲存銀行資訊";
+    });
+  }
+  async function loadPayment() {
+    try {
+      const p = await getPayment();
+      document.getElementById("payBankName").value    = p.bankName || "";
+      document.getElementById("payBankCode").value    = p.bankCode || "";
+      document.getElementById("payAccountName").value = p.accountName || "";
+      document.getElementById("payBankAccount").value = p.bankAccount || "";
+      document.getElementById("payNote").value        = p.note || "";
+      if (p.bankAccount) {
+        document.getElementById("paymentStatus").textContent = "目前已設定，購物網會顯示這份資料";
+      } else {
+        document.getElementById("paymentStatus").innerHTML =
+          `<span style="color:var(--orange-deep)">⚠️ 尚未設定，購物網會提示客人「老闆還沒設定帳號」</span>`;
+      }
+    } catch (err) {
+      document.getElementById("paymentStatus").textContent = "載入失敗：" + err.message;
+    }
+  }
+
+  function renderList(elId, arr, onRemove) {
+    const $el = document.getElementById(elId);
+    $el.innerHTML = arr.map((name, i) => `
+      <span class="lookup-pill">
+        ${name}
+        <button data-i="${i}" title="移除">✕</button>
+      </span>`).join("");
+    $el.querySelectorAll("button[data-i]").forEach(b => {
+      b.addEventListener("click", () => onRemove(Number(b.dataset.i)));
+    });
+  }
+
+  async function persist() {
+    try {
+      await saveLookups(lookups);
+    } catch (err) {
+      toast("儲存失敗：" + err.message, "err");
+    }
+  }
+
+  // ---- 供應商 ----
+  function renderSuppliers() {
+    renderList("supplierList", lookups.suppliers, async (i) => {
+      const name = lookups.suppliers[i];
+      if (!confirm(`移除供應商「${name}」？\n（不會影響已開的進貨單，只是新單下拉看不到）`)) return;
+      lookups.suppliers.splice(i, 1);
+      renderSuppliers();
+      await persist();
+      toast("已移除", "ok");
+    });
+  }
+  async function addSupplier() {
+    const $input = document.getElementById("newSupplier");
+    const v = $input.value.trim();
+    if (!v) return toast("請輸入名稱", "err");
+    if (lookups.suppliers.includes(v)) return toast("已存在相同名稱", "err");
+    lookups.suppliers.push(v);
+    lookups.suppliers.sort((a,b) => a.localeCompare(b, "zh-Hant"));
+    $input.value = "";
+    renderSuppliers();
+    await persist();
+    toast("✓ 已新增", "ok");
+  }
+  document.getElementById("btnAddSupplier").addEventListener("click", addSupplier);
+  document.getElementById("newSupplier").addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); addSupplier(); }
+  });
+
+  // ---- 配送員 ----
+  function renderStaff() {
+    renderList("staffList", lookups.deliveryStaff, async (i) => {
+      const name = lookups.deliveryStaff[i];
+      if (!confirm(`移除配送員「${name}」？`)) return;
+      lookups.deliveryStaff.splice(i, 1);
+      renderStaff();
+      await persist();
+      toast("已移除", "ok");
+    });
+  }
+  async function addStaff() {
+    const $input = document.getElementById("newStaff");
+    const v = $input.value.trim();
+    if (!v) return toast("請輸入名稱", "err");
+    if (lookups.deliveryStaff.includes(v)) return toast("已存在相同名稱", "err");
+    lookups.deliveryStaff.push(v);
+    lookups.deliveryStaff.sort((a,b) => a.localeCompare(b, "zh-Hant"));
+    $input.value = "";
+    renderStaff();
+    await persist();
+    toast("✓ 已新增", "ok");
+  }
+  document.getElementById("btnAddStaff").addEventListener("click", addStaff);
+  document.getElementById("newStaff").addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); addStaff(); }
+  });
+
+  // ---- 經辦人 ----
+  function renderHandlers() {
+    renderList("handlerList", lookups.handlers || [], async (i) => {
+      const name = lookups.handlers[i];
+      if (!confirm(`移除經辦人「${name}」？\n（不會影響已開的單子，只是新單下拉選不到）`)) return;
+      lookups.handlers.splice(i, 1);
+      renderHandlers();
+      await persist();
+      toast("已移除", "ok");
+    });
+  }
+  async function addHandler() {
+    const $input = document.getElementById("newHandler");
+    const v = $input.value.trim();
+    if (!v) return toast("請輸入名稱", "err");
+    lookups.handlers = lookups.handlers || [];
+    if (lookups.handlers.includes(v)) return toast("已存在相同名稱", "err");
+    lookups.handlers.push(v);
+    $input.value = "";
+    renderHandlers();
+    await persist();
+    toast("✓ 已新增", "ok");
+  }
+  document.getElementById("btnAddHandler").addEventListener("click", addHandler);
+  document.getElementById("newHandler").addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); addHandler(); }
+  });
+
+  // ---- 水果大項分類 ----
+  function renderCategories() {
+    const $list = document.getElementById("categoryList");
+    const cats = lookups.categories || [];
+    $list.innerHTML = cats.map((name, i) => {
+      const itemCount = allItems.filter(x => (x.category||"") === name).length;
+      return `<span class="lookup-pill" data-cat-pill="${name}" style="cursor:pointer">
+        🍎 ${name} <span style="background:#fff;color:var(--orange-deep);border-radius:999px;padding:1px 8px;font-size:.74rem;font-weight:700">${itemCount}</span>
+        <button data-i="${i}" data-rm-cat title="移除">✕</button>
+      </span>`;
+    }).join("") || `<span class="muted" style="font-style:italic">尚未建立分類</span>`;
+
+    // 點 pill 看分類底下品項
+    $list.querySelectorAll("[data-cat-pill]").forEach(pill => {
+      pill.addEventListener("click", e => {
+        if (e.target.closest("[data-rm-cat]")) return;   // 點到「✕」不觸發
+        showCatItems(pill.dataset.catPill);
+      });
+    });
+    // 移除按鈕
+    $list.querySelectorAll("[data-rm-cat]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const i = Number(btn.dataset.i);
+        const name = lookups.categories[i];
+        const inUse = allItems.filter(x => (x.category||"") === name).length;
+        const msg = inUse
+          ? `「${name}」目前有 ${inUse} 個品項屬於此分類。\n移除分類後這些品項會變成「未分類」。\n要繼續嗎？`
+          : `移除分類「${name}」？`;
+        if (!confirm(msg)) return;
+        lookups.categories.splice(i, 1);
+        renderCategories();
+        await persist();
+        document.getElementById("catItemsBlock").classList.add("hidden");
+        toast("已移除", "ok");
+      });
+    });
+  }
+
+  function showCatItems(name) {
+    const items = allItems.filter(x => (x.category||"") === name);
+    document.getElementById("catItemsTitle").textContent = name;
+    const $box = document.getElementById("catItemsList");
+    if (!items.length) {
+      $box.innerHTML = `<span class="muted">這個分類底下還沒有品項。到「品項清單」編輯品項，把分類設為「${name}」即可歸類。</span>`;
+    } else {
+      $box.innerHTML = items
+        .sort((a,b) => (a.name||"").localeCompare(b.name||"", "zh-Hant"))
+        .map(i => {
+          const stk = Number(i.stock||0);
+          const stockTag = stk <= 0 ? `<span class="tag out" style="font-size:.72rem">售完</span>`
+                       : stk <= Number(i.lowStock??5) ? `<span class="tag warn" style="font-size:.72rem">低庫存</span>`
+                       : "";
+          return `<div>• <b>${i.name}</b> ${stockTag} <span class="muted">— 庫存 ${fmt.num(stk)} ${i.unit||""}　售價 ${i.price?fmt.money(i.price):"未定"}</span></div>`;
+        }).join("");
+    }
+    document.getElementById("catItemsBlock").classList.remove("hidden");
+  }
+
+  async function addCategory() {
+    const $input = document.getElementById("newCategory");
+    const v = $input.value.trim();
+    if (!v) return toast("請輸入分類名稱", "err");
+    lookups.categories = lookups.categories || [];
+    if (lookups.categories.includes(v)) return toast("已存在相同分類", "err");
+    lookups.categories.push(v);
+    $input.value = "";
+    renderCategories();
+    await persist();
+    toast("✓ 已新增分類", "ok");
+  }
+  document.getElementById("btnAddCategory").addEventListener("click", addCategory);
+  document.getElementById("newCategory").addEventListener("keydown", e => {
+    if (e.key === "Enter") { e.preventDefault(); addCategory(); }
+  });
+
+  // ============ API 金鑰 ============
+  function maskKey(k) {
+    if (!k) return "";
+    if (k.length < 12) return "****";
+    return k.slice(0, 8) + " **** **** **** " + k.slice(-4);
+  }
+  async function loadApiKey() {
+    const $input = document.getElementById("apiKeyInput");
+    const $status = document.getElementById("keyStatus");
+    try {
+      const s = await getSecrets();
+      if (s.geminiApiKey) {
+        $input.value = s.geminiApiKey;
+        $status.innerHTML = `✓ 已設定（顯示為密碼模式，按 👁 可看明文）<br>目前金鑰：<code>${maskKey(s.geminiApiKey)}</code>`;
+        $status.style.color = "var(--leaf-deep)";
+      } else {
+        $input.value = "";
+        $status.innerHTML = `⚠️ 尚未設定 — AI 訂單解析無法使用，請貼上金鑰並儲存`;
+        $status.style.color = "var(--tomato)";
+      }
+    } catch (err) {
+      $status.innerHTML = `讀取失敗：${err.message}`;
+      $status.style.color = "var(--tomato)";
+    }
+  }
+  function bindApiKeyPanel() {
+    document.getElementById("btnToggleKey").addEventListener("click", () => {
+      const $i = document.getElementById("apiKeyInput");
+      $i.type = $i.type === "password" ? "text" : "password";
+    });
+    document.getElementById("btnSaveKey").addEventListener("click", async () => {
+      const v = document.getElementById("apiKeyInput").value.trim();
+      if (!v) { toast("請輸入金鑰", "err"); return; }
+      if (!v.startsWith("AIzaSy")) {
+        if (!confirm("這看起來不是 Google API 金鑰（通常以 AIzaSy 開頭）。仍要儲存嗎？")) return;
+      }
+      try {
+        await saveSecrets({ geminiApiKey: v });
+        clearApiKeyCache();
+        toast("✓ 金鑰已儲存到 Firestore", "ok");
+        loadApiKey();
+      } catch (err) {
+        toast("儲存失敗：" + err.message, "err");
+      }
+    });
+  }
+
+  // ============ 系統資料總覽 + 危險區 ============
+  const NAME_ZH = {
+    items: "品項主檔",
+    sales: "銷貨單",
+    purchases: "進貨單",
+    shipments: "出貨單",
+    batches: "訂單批次"
+  };
+  const $statsBlock = document.getElementById("statsBlock");
+
+  async function reloadStats() {
+    $statsBlock.innerHTML = `<div class="muted" style="text-align:center;padding:20px">載入中…</div>`;
+    try {
+      const s = await getDataStats();
+      $statsBlock.innerHTML = `
+        <div class="table-wrap">
+          <table class="tb" style="margin:0">
+            <thead><tr><th>類型</th><th class="num">筆數</th><th>備註</th><th></th></tr></thead>
+            <tbody>
+              <tr>
+                <td>🍎 品項主檔</td>
+                <td class="num"><b>${fmt.num(s.items.count)}</b></td>
+                <td><span class="muted">低庫存 ${s.items.lowStock} · 售完 ${s.items.outOfStock} · 庫存總值 ${fmt.money(s.items.totalStockValue)}</span></td>
+                <td><a href="items.html" class="btn ghost icon-only" title="前往管理">→</a></td>
+              </tr>
+              <tr>
+                <td>🛒 銷貨單</td>
+                <td class="num"><b>${fmt.num(s.sales.count)}</b></td>
+                <td><span class="muted">總額 ${fmt.money(s.sales.total)}</span></td>
+                <td><a href="sales.html" class="btn ghost icon-only" title="前往管理">→</a></td>
+              </tr>
+              <tr>
+                <td>📦 進貨單</td>
+                <td class="num"><b>${fmt.num(s.purchases.count)}</b></td>
+                <td><span class="muted">總額 ${fmt.money(s.purchases.total)}</span></td>
+                <td><a href="purchase.html" class="btn ghost icon-only" title="前往管理">→</a></td>
+              </tr>
+              <tr>
+                <td>🚚 出貨單</td>
+                <td class="num"><b>${fmt.num(s.shipments.count)}</b></td>
+                <td>—</td>
+                <td><a href="shipping.html" class="btn ghost icon-only" title="前往管理">→</a></td>
+              </tr>
+              <tr>
+                <td>📋 訂單批次</td>
+                <td class="num"><b>${fmt.num(s.batches.count)}</b></td>
+                <td><span class="muted">${s.batches.draft} 草稿 / ${s.batches.completed} 已確認</span></td>
+                <td><a href="batches.html" class="btn ghost icon-only" title="前往管理">→</a></td>
+              </tr>
+              <tr>
+                <td>🏪 供應商</td>
+                <td class="num"><b>${(lookups.suppliers||[]).length}</b></td>
+                <td><span class="muted">於上方「🏪 供應商」管理</span></td>
+                <td>—</td>
+              </tr>
+              <tr>
+                <td>🚚 配送員</td>
+                <td class="num"><b>${(lookups.deliveryStaff||[]).length}</b></td>
+                <td><span class="muted">於上方「🚚 配送員」管理</span></td>
+                <td>—</td>
+              </tr>
+              <tr>
+                <td>👤 經辦人</td>
+                <td class="num"><b>${(lookups.handlers||[]).length}</b></td>
+                <td><span class="muted">於上方「👤 經辦人」管理</span></td>
+                <td>—</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      `;
+    } catch (err) {
+      console.error(err);
+      $statsBlock.innerHTML = `<div style="color:var(--tomato);padding:14px">載入失敗：${err.message}</div>`;
+    }
+  }
+
+  function bindDataPanel() {
+    document.getElementById("btnReloadStats").addEventListener("click", reloadStats);
+
+    // 個別 collection 清空
+    document.querySelectorAll("[data-clear]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const name = btn.dataset.clear;
+        const zh = NAME_ZH[name] || name;
+        const word = "DELETE";
+        const input = prompt(`即將永久刪除「${zh}」全部資料，無法復原。\n\n確認請輸入：${word}`);
+        if (input !== word) { toast("已取消（輸入不符）", "err"); return; }
+        btn.disabled = true;
+        try {
+          const n = await clearCollection(name);
+          toast(`✓ 已刪除 ${zh} ${n} 筆`, "ok");
+          await reloadStats();
+        } catch (err) {
+          console.error(err);
+          toast("刪除失敗：" + err.message, "err");
+        }
+        btn.disabled = false;
+      });
+    });
+
+    // 重置交易 + 庫存
+    document.getElementById("btnResetAll").addEventListener("click", async () => {
+      const word = "RESET";
+      const input = prompt(
+        `即將執行：\n` +
+        `① 清空所有銷貨單 / 進貨單 / 出貨單 / 訂單批次\n` +
+        `② 把所有品項的庫存與平均成本歸零（品項本身保留）\n\n` +
+        `這會把交易資料完全清空、像新開帳一樣。無法復原。\n\n` +
+        `確認請輸入：${word}`
+      );
+      if (input !== word) { toast("已取消（輸入不符）", "err"); return; }
+      const $btn = document.getElementById("btnResetAll");
+      $btn.disabled = true;
+      $btn.textContent = "⏳ 重置中…";
+      try {
+        const r = await resetTransactionsAndStock();
+        toast(`✓ 重置完成：銷 ${r.sales} / 進 ${r.purchases} / 出 ${r.shipments} / 批 ${r.batches} / 品項重置 ${r.itemsReset}`, "ok");
+        await reloadStats();
+      } catch (err) {
+        console.error(err);
+        toast("重置失敗：" + err.message, "err");
+      }
+      $btn.disabled = false;
+      $btn.textContent = "🚨 重置交易資料（清空銷/進/出/批 + 品項庫存歸零）";
+    });
+  }
+</script>
+</body>
+</html>

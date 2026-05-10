@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>報表 · 果果家 KOKOYA</title>
+<link rel="icon" href="assets/logo-fallback.svg">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main class="container">
+  <div class="card">
+    <div class="card-h">
+      <h2>📊 營業報表</h2>
+      <div class="flex" style="gap:8px;flex-wrap:wrap">
+        <select class="select" id="range" style="min-width:170px">
+          <optgroup label="期間">
+            <option value="month:current" selected>本月</option>
+            <option value="month:prev">上月</option>
+            <option value="d:7">近 7 天</option>
+            <option value="d:30">近 30 天</option>
+            <option value="d:90">近 90 天</option>
+            <option value="d:180">近 6 個月</option>
+            <option value="d:365">近 1 年</option>
+            <option value="all">全部歷史</option>
+          </optgroup>
+          <!-- JS 會動態加入「按月份」optgroup -->
+        </select>
+        <select class="select" id="grain" style="min-width:120px" title="圖表/列表的顯示粒度">
+          <option value="auto" selected>自動</option>
+          <option value="day">按日顯示</option>
+          <option value="month">按月顯示</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid cols-4">
+      <div class="stat accent-orange"><div class="label">總營收</div><div class="value" id="vRev">—</div></div>
+      <div class="stat accent-leaf">
+        <div class="label">總成本</div>
+        <div class="value" id="vCost">—</div>
+        <div class="delta" id="vCostBreak">進貨 — / 耗損 —</div>
+      </div>
+      <div class="stat accent-tomato"><div class="label">利潤</div><div class="value" id="vProfit">—</div><div class="delta" id="vMargin">—</div></div>
+      <div class="stat accent-lemon"><div class="label">銷售筆數</div><div class="value" id="vCnt">—</div></div>
+    </div>
+  </div>
+
+  <div class="grid cols-2" style="margin-top:18px">
+    <section class="card">
+      <div class="card-h"><h3>每日營收 vs 利潤</h3></div>
+      <canvas id="chDaily" height="170"></canvas>
+    </section>
+    <section class="card">
+      <div class="card-h"><h3>品項銷售佔比</h3></div>
+      <canvas id="chPie" height="170"></canvas>
+    </section>
+  </div>
+
+  <section class="card" style="margin-top:18px">
+    <div class="card-h">
+      <h3>📦 分類銷售統計</h3>
+      <span class="muted" style="font-size:.82rem">按水果大項分類匯總（蘋果類/柑橘類/...）</span>
+    </div>
+    <div class="table-wrap">
+      <table class="tb">
+        <thead><tr><th>分類</th><th class="num">品項數</th><th class="num">售出量</th><th class="num">營收</th><th class="num">售出成本</th><th class="num">利潤</th><th class="num">利潤率</th></tr></thead>
+        <tbody id="catRank"><tr><td colspan="7" class="empty">載入中…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:18px">
+    <div class="card-h">
+      <h3>熱賣品項排行</h3>
+      <span class="muted" style="font-size:.82rem">售出成本=賣出量×平均成本（COGS） · 進貨成本=期間該品項進貨花費 · 利潤用 COGS 算 · 上方總成本=進貨+耗損 · 點 ▸ 展開看售出方式</span>
+    </div>
+    <div class="table-wrap">
+      <table class="tb" id="rankTable">
+        <thead><tr><th style="width:34px"></th><th>排名</th><th>品項</th><th class="num">售出量</th><th class="num">營收</th><th class="num">售出成本</th><th class="num">進貨成本</th><th class="num">利潤</th><th class="num">利潤率</th></tr></thead>
+        <tbody id="rank"><tr><td colspan="9" class="empty">載入中…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:18px">
+    <div class="card-h">
+      <h3>🗑 損耗統計</h3>
+      <span class="muted" style="font-size:.82rem">水果壞掉/變質/試吃/樣品贈送的損失</span>
+    </div>
+    <div class="grid cols-2" style="margin-bottom:16px">
+      <div class="stat accent-tomato">
+        <div class="label">期間總損失</div>
+        <div class="value" id="vWasteTotal">—</div>
+        <div class="delta" id="vWasteCnt">— 單</div>
+      </div>
+      <div class="stat accent-leaf">
+        <div class="label">損失佔營收比</div>
+        <div class="value" id="vWastePct">—</div>
+        <div class="delta">營收的多少%是損失</div>
+      </div>
+    </div>
+    <div class="grid cols-2" style="gap:14px">
+      <div>
+        <h4 style="margin:0 0 8px;font-size:.95rem;color:var(--ink-2)">📦 損耗 Top 5 品項</h4>
+        <table class="tb">
+          <thead><tr><th>品項</th><th class="num">損耗量</th><th class="num">損失</th></tr></thead>
+          <tbody id="wasteByItem"><tr><td colspan="3" class="empty">無資料</td></tr></tbody>
+        </table>
+      </div>
+      <div>
+        <h4 style="margin:0 0 8px;font-size:.95rem;color:var(--ink-2)">📋 原因分布</h4>
+        <table class="tb">
+          <thead><tr><th>原因</th><th class="num">單數</th><th class="num">損失</th></tr></thead>
+          <tbody id="wasteByReason"><tr><td colspan="3" class="empty">無資料</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:18px">
+    <div class="card-h">
+      <h3>經辦人銷售統計</h3>
+      <span class="muted" style="font-size:.82rem">利潤 = 營收 − 成本</span>
+    </div>
+    <div class="table-wrap">
+      <table class="tb">
+        <thead><tr><th>經辦人</th><th class="num">單數</th><th class="num">營收</th><th class="num">成本</th><th class="num">利潤</th><th class="num">平均單金額</th></tr></thead>
+        <tbody id="byUser"><tr><td colspan="6" class="empty">—</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script type="module">
+  import { mountShell, fmt } from "./js/app-shell.js";
+  import { listSales, listPurchases, listItems, listWastes } from "./js/data.js";
+
+  await mountShell({ active: "reports" });
+
+  const COLORS = ["#E8A87C","#C97B63","#A8B89E","#E9C46A","#6F9AB6","#DDA15E","#9CAE85","#B07418"];
+
+  let chDaily, chPie;
+
+  // 算成本（COGS 視角）— 優先用「成交當下鎖定」的成本
+  // 為什麼不重算：avgCost 會隨進貨更新，回頭算會讓「過去銷貨」的成本浮動，
+  // 跟單據存的 cost 不一致，也會在進貨後讓舊銷貨利潤忽然變少。
+  function computeLineCost(l, itemMap) {
+    const savedUnit = Number(l.unitCost);
+    if (savedUnit > 0) return Number(l.qty) * savedUnit;
+    // 舊資料沒存 unitCost → 用當下 avgCost 補（最後手段）
+    const item = itemMap[l.itemId];
+    const currentAvg = item ? Number(item.avgCost) || 0 : 0;
+    return Number(l.qty) * currentAvg;
+  }
+  function computeSaleCost(s, itemMap) {
+    // 優先用單據存的 cost（成交當下已鎖定）
+    const stored = Number(s.cost);
+    if (stored > 0) return stored;
+    return (s.lines||[]).reduce((tot, l) => tot + computeLineCost(l, itemMap), 0);
+  }
+
+  // 反推這筆銷貨 line 是用哪個售價組合（priceTier）
+  // 配對規則：先找「qty 整除 tier.qty 且 line.price ≈ tier.unitPrice」
+  function detectTier(line, item) {
+    const qty   = Number(line.qty)   || 0;
+    const price = Number(line.price) || 0;
+    const unit  = item?.unit || "件";
+    const tiers = Array.isArray(item?.priceTiers) ? item.priceTiers : [];
+    for (const t of tiers) {
+      const tq = Number(t.qty);
+      const tp = Number(t.price);
+      if (tq <= 0 || tp <= 0) continue;
+      const tierUnitPrice = tp / tq;
+      // 數量整除 + 單價誤差 < 1
+      if (qty % tq === 0 && Math.abs(price - tierUnitPrice) < 1) {
+        const groups = qty / tq;
+        const label = t.label || `${tq}${unit}組`;
+        return { label, tierQty: tq, tierPrice: tp, groups, unitPrice: tierUnitPrice };
+      }
+    }
+    // 沒對到 tier → 視為單品銷售
+    return { label: `單${unit}`, tierQty: 1, tierPrice: price, groups: qty, unitPrice: price };
+  }
+
+  // 取目前下拉值對應的時間範圍
+  function getRangeBounds(value) {
+    const today = new Date();
+    if (value === "month:current") {
+      const start = new Date(today.getFullYear(), today.getMonth(), 1);
+      const end = new Date(today.getFullYear(), today.getMonth()+1, 1);
+      return { start, end, days: Math.ceil((end-start)/86400000) };
+    }
+    if (value === "month:prev") {
+      const start = new Date(today.getFullYear(), today.getMonth()-1, 1);
+      const end = new Date(today.getFullYear(), today.getMonth(), 1);
+      return { start, end, days: Math.ceil((end-start)/86400000) };
+    }
+    if (value === "all") {
+      return { start: new Date(2000,0,1), end: new Date(today.getFullYear()+10,0,1), days: 0 };
+    }
+    if (value.startsWith("d:")) {
+      const days = Number(value.slice(2)) || 30;
+      const start = new Date(); start.setDate(start.getDate() - days + 1); start.setHours(0,0,0,0);
+      const end = new Date(); end.setDate(end.getDate() + 1); end.setHours(0,0,0,0);
+      return { start, end, days };
+    }
+    if (value.startsWith("ym:")) {
+      const [y, m] = value.slice(3).split("-").map(Number);
+      const start = new Date(y, m-1, 1);
+      const end = new Date(y, m, 1);
+      return { start, end, days: Math.ceil((end-start)/86400000) };
+    }
+    // fallback
+    const start = new Date(); start.setDate(start.getDate() - 30);
+    const end = new Date(); end.setDate(end.getDate() + 1);
+    return { start, end, days: 30 };
+  }
+
+  // 第一次載入時，依 sales+purchases 中出現過的月份，動態加入下拉選項
+  let _monthsAdded = false;
+  function refreshMonthOptions(sales, purchases) {
+    if (_monthsAdded) return;
+    const months = new Set();
+    [...sales, ...purchases].forEach(x => {
+      const d = x.date?.toDate ? x.date.toDate() : new Date(x.date);
+      if (!isNaN(d)) months.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`);
+    });
+    if (!months.size) return;
+    const sorted = [...months].sort().reverse();
+    const $sel = document.getElementById("range");
+    const cur = $sel.value;
+    const optgroup = document.createElement("optgroup");
+    optgroup.label = "按月份";
+    sorted.forEach(m => {
+      const opt = document.createElement("option");
+      opt.value = `ym:${m}`;
+      opt.textContent = m;
+      optgroup.appendChild(opt);
+    });
+    $sel.appendChild(optgroup);
+    if (cur) $sel.value = cur;
+    _monthsAdded = true;
+  }
+
+  async function load() {
+    const value = document.getElementById("range").value;
+    // 先撈全部歷史，client 端依範圍切割（避免每次切換都重抓）
+    const [allSales, allPurchases, items, allWastes] = await Promise.all([
+      listSales({ days: null }),
+      listPurchases({ days: null }),
+      listItems(),
+      listWastes({ days: null }).catch(() => [])
+    ]);
+    refreshMonthOptions(allSales, allPurchases);
+    const itemMap = Object.fromEntries(items.map(i => [i.id, i]));
+
+    // 切出指定範圍
+    const { start, end, days } = getRangeBounds(value);
+    const inRange = (x) => {
+      const d = x.date?.toDate ? x.date.toDate() : new Date(x.date);
+      return !isNaN(d) && d >= start && d < end;
+    };
+    const sales     = allSales.filter(inRange);
+    const purchases = allPurchases.filter(inRange);
+    const wastes    = allWastes.filter(inRange);
+
+    // KPI（現金流視角：成本 = 期間進貨花費 + 期間耗損損失；利潤 = 營收 − 總成本）
+    const rev          = sales.reduce((a,b)=>a+(b.total||0), 0);
+    const purchaseCost = purchases.reduce((a,b)=>a+(b.total||0), 0);
+    const wasteLoss    = wastes.reduce((a,b)=>a+(b.totalLoss||0), 0);
+    const cost         = purchaseCost + wasteLoss;
+    const profit       = rev - cost;
+    document.getElementById("vRev").textContent      = fmt.money(rev);
+    document.getElementById("vCost").textContent     = fmt.money(Math.round(cost));
+    document.getElementById("vCostBreak").textContent = `進貨 ${fmt.money(Math.round(purchaseCost))} / 耗損 ${fmt.money(Math.round(wasteLoss))}`;
+    document.getElementById("vProfit").textContent   = fmt.money(Math.round(profit));
+    document.getElementById("vCnt").textContent      = sales.length;
+    document.getElementById("vMargin").textContent   = rev>0 ? `利潤率 ${(profit/rev*100).toFixed(1)}%` : "—";
+
+    // 圖表粒度：auto 時，期間 ≤ 62 天用日、其他用月
+    const grainSel = document.getElementById("grain").value;
+    const totalDays = Math.max(1, Math.ceil((end - start) / 86400000));
+    let grain = grainSel;
+    if (grain === "auto") grain = totalDays <= 62 ? "day" : "month";
+
+    const labels = [], rArr = [], pArr = [];
+    if (grain === "day") {
+      // 按日 — 最多 180 個 bar
+      const cap = Math.min(180, totalDays);
+      for (let i = 0; i < cap; i++) {
+        const d = new Date(start); d.setDate(d.getDate() + i);
+        labels.push(`${d.getMonth()+1}/${d.getDate()}`);
+        const sameDay = (x) => {
+          const xd = x.date.toDate ? x.date.toDate() : new Date(x.date);
+          return xd.toDateString() === d.toDateString();
+        };
+        const dayRev   = sales.filter(sameDay).reduce((a,b)=>a+(b.total||0), 0);
+        const dayPur   = purchases.filter(sameDay).reduce((a,b)=>a+(b.total||0), 0);
+        const dayWaste = wastes.filter(sameDay).reduce((a,b)=>a+(b.totalLoss||0), 0);
+        rArr.push(dayRev);
+        pArr.push(dayRev - dayPur - dayWaste);
+      }
+    } else {
+      // 按月 — 列出 start 到 end 之間的月份
+      const months = [];
+      const cur = new Date(start.getFullYear(), start.getMonth(), 1);
+      while (cur < end) {
+        months.push(new Date(cur));
+        cur.setMonth(cur.getMonth() + 1);
+      }
+      months.forEach(m => {
+        const ymKey = `${m.getFullYear()}-${String(m.getMonth()+1).padStart(2,"0")}`;
+        labels.push(ymKey);
+        const inMonth = (x) => {
+          const xd = x.date.toDate ? x.date.toDate() : new Date(x.date);
+          return xd.getFullYear() === m.getFullYear() && xd.getMonth() === m.getMonth();
+        };
+        const mRev   = sales.filter(inMonth).reduce((a,b)=>a+(b.total||0), 0);
+        const mPur   = purchases.filter(inMonth).reduce((a,b)=>a+(b.total||0), 0);
+        const mWaste = wastes.filter(inMonth).reduce((a,b)=>a+(b.totalLoss||0), 0);
+        rArr.push(mRev);
+        pArr.push(mRev - mPur - mWaste);
+      });
+    }
+    if (chDaily) chDaily.destroy();
+    chDaily = new Chart(document.getElementById("chDaily"), {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          { label:"營收", data:rArr, backgroundColor:"rgba(232,168,124,.85)", borderRadius:6 },
+          { label:"利潤", data:pArr, backgroundColor:"rgba(168,184,158,.85)", borderRadius:6 }
+        ]
+      },
+      options: {
+        responsive:true,
+        plugins:{ legend:{ position:"bottom" }, title:{ display:true, text: grain==="day" ? "（按日）" : "（按月）", color:"#8B7355", font:{size:11} } },
+        scales:{ y:{ beginAtZero:true, ticks:{ callback:v=>"$"+v }}}
+      }
+    });
+
+    // ===== 期間進貨成本 by itemId（給品項排行用） =====
+    const purchaseCostByItem = {};
+    purchases.forEach(p => (p.lines||[]).forEach(l => {
+      if (!l.itemId) return;
+      const lineCost = Number(l.lineTotal) || (Number(l.qty) * Number(l.cost) || 0);
+      purchaseCostByItem[l.itemId] = (purchaseCostByItem[l.itemId] || 0) + lineCost;
+    }));
+
+    // ===== 品項聚合 + 售出方式明細 =====
+    const itemAgg = {};
+    sales.forEach(s => (s.lines||[]).forEach(l => {
+      const k = l.itemId || ("__name__" + (l.name || "未知"));
+      const displayName = (itemMap[l.itemId]?.name) || l.name || "(已刪除品項)";
+      if (!itemAgg[k]) {
+        itemAgg[k] = {
+          itemId: l.itemId || "",
+          name: displayName,
+          qty: 0,
+          rev: 0,
+          cogsCost: 0,                                   // 售出成本（賣出 × 平均成本）
+          purchaseCost: purchaseCostByItem[l.itemId] || 0,  // 期間進貨成本
+          tiers: {}
+        };
+      }
+      itemAgg[k].qty += Number(l.qty) || 0;
+      itemAgg[k].rev += Number(l.lineTotal || (Number(l.qty)*Number(l.price))) || 0;
+      itemAgg[k].cogsCost += computeLineCost(l, itemMap);    // ✨ 累加 COGS
+      // 偵測 tier
+      const item = itemMap[l.itemId];
+      const tier = detectTier(l, item);
+      const tk = `${tier.label}@${tier.tierPrice}`;
+      if (!itemAgg[k].tiers[tk]) {
+        itemAgg[k].tiers[tk] = { label: tier.label, tierPrice: tier.tierPrice, groups: 0, totalQty: 0, rev: 0 };
+      }
+      itemAgg[k].tiers[tk].groups   += tier.groups;
+      itemAgg[k].tiers[tk].totalQty += Number(l.qty) || 0;
+      itemAgg[k].tiers[tk].rev      += Number(l.lineTotal || (Number(l.qty)*Number(l.price))) || 0;
+    }));
+    const sorted = Object.values(itemAgg).sort((a,b) => b.rev - a.rev);
+
+    if (chPie) chPie.destroy();
+    chPie = new Chart(document.getElementById("chPie"), {
+      type: "doughnut",
+      data: {
+        labels: sorted.slice(0,6).map(v => v.name),
+        datasets: [{ data: sorted.slice(0,6).map(v => v.rev), backgroundColor: COLORS, borderColor:"#FAF6EE", borderWidth:3 }]
+      },
+      options: { plugins: { legend: { position: "right" }}}
+    });
+
+    document.getElementById("rank").innerHTML = sorted.length
+      ? sorted.slice(0,12).map((v, i) => {
+          // 用 COGS 算利潤（per-item 較準）
+          const p = v.rev - v.cogsCost;
+          const m = v.rev>0 ? (p/v.rev*100).toFixed(1)+"%" : "—";
+          const tierEntries = Object.values(v.tiers).sort((a,b) => b.rev - a.rev);
+          const tierRows = tierEntries.map(t =>
+            `<tr class="tier-detail">
+               <td colspan="2"></td>
+               <td style="padding-left:24px;color:var(--ink-3);font-size:.88rem">└ ${t.label}（單價 ${fmt.money(Math.round(t.tierPrice))}）</td>
+               <td class="num" style="font-size:.88rem;color:var(--ink-3)">${fmt.num(t.groups)} 組 / ${fmt.num(t.totalQty)} ${itemMap[v.itemId]?.unit||""}</td>
+               <td class="num" style="font-size:.88rem;color:var(--ink-3)">${fmt.money(t.rev)}</td>
+               <td colspan="4"></td>
+             </tr>`).join("");
+          return `<tr class="rank-row" data-itemid="${v.itemId}" style="cursor:pointer">
+            <td><span class="exp-arrow">▸</span></td>
+            <td>${["🥇","🥈","🥉"][i] || (i+1)}</td>
+            <td>${v.name}</td>
+            <td class="num">${fmt.num(v.qty)}</td>
+            <td class="num">${fmt.money(v.rev)}</td>
+            <td class="num">${fmt.money(Math.round(v.cogsCost))}</td>
+            <td class="num" style="color:var(--ink-3)">${fmt.money(Math.round(v.purchaseCost))}</td>
+            <td class="num" style="color:${p>=0?'var(--leaf-deep)':'var(--tomato)'}">${fmt.money(Math.round(p))}</td>
+            <td class="num">${m}</td>
+          </tr>${tierRows}`;
+        }).join("")
+      : `<tr><td colspan="9" class="empty">無資料</td></tr>`;
+
+    // 預設：把 tier-detail 隱藏，點主列才展開
+    document.querySelectorAll("#rank .tier-detail").forEach(tr => tr.style.display = "none");
+    document.querySelectorAll("#rank .rank-row").forEach(tr => {
+      tr.addEventListener("click", () => {
+        const open = tr.classList.toggle("open");
+        tr.querySelector(".exp-arrow").textContent = open ? "▾" : "▸";
+        // 把後面所有 tier-detail 行 toggle，直到下一個 rank-row
+        let n = tr.nextElementSibling;
+        while (n && !n.classList.contains("rank-row")) {
+          n.style.display = open ? "" : "none";
+          n = n.nextElementSibling;
+        }
+      });
+    });
+
+    // ===== 分類銷售統計 =====
+    const catAgg = {};
+    sorted.forEach(v => {
+      const cat = (itemMap[v.itemId]?.category) || "未分類";
+      if (!catAgg[cat]) catAgg[cat] = { name: cat, itemCount: 0, qty: 0, rev: 0, cogsCost: 0, items: new Set() };
+      catAgg[cat].qty      += v.qty;
+      catAgg[cat].rev      += v.rev;
+      catAgg[cat].cogsCost += v.cogsCost;
+      catAgg[cat].items.add(v.itemId);
+    });
+    const catSorted = Object.values(catAgg).sort((a,b) => b.rev - a.rev);
+    document.getElementById("catRank").innerHTML = catSorted.length
+      ? catSorted.map(c => {
+          const profit = c.rev - c.cogsCost;
+          const margin = c.rev > 0 ? (profit/c.rev*100).toFixed(1)+"%" : "—";
+          return `<tr>
+            <td><b>📦 ${c.name}</b></td>
+            <td class="num">${c.items.size}</td>
+            <td class="num">${fmt.num(c.qty)}</td>
+            <td class="num">${fmt.money(c.rev)}</td>
+            <td class="num">${fmt.money(Math.round(c.cogsCost))}</td>
+            <td class="num" style="color:${profit>=0?'var(--leaf-deep)':'var(--tomato)'}">${fmt.money(Math.round(profit))}</td>
+            <td class="num">${margin}</td>
+          </tr>`;
+        }).join("")
+      : `<tr><td colspan="7" class="empty">無資料</td></tr>`;
+
+    // ===== 損耗統計 =====
+    const wasteTotal = wastes.reduce((a,b) => a + (b.totalLoss || 0), 0);
+    document.getElementById("vWasteTotal").textContent = fmt.money(Math.round(wasteTotal));
+    document.getElementById("vWasteCnt").textContent = `${wastes.length} 單`;
+    document.getElementById("vWastePct").textContent = rev > 0 ? (wasteTotal / rev * 100).toFixed(1) + "%" : "—";
+
+    const wasteByItem = {};
+    wastes.forEach(w => (w.lines||[]).forEach(l => {
+      const k = l.itemId || `__name__${l.name||"未知"}`;
+      if (!wasteByItem[k]) wasteByItem[k] = { name: itemMap[l.itemId]?.name || l.name || "(已刪除)", qty: 0, loss: 0, unit: l.unit||"" };
+      wasteByItem[k].qty  += Number(l.qty) || 0;
+      wasteByItem[k].loss += Number(l.lineLoss) || 0;
+    }));
+    const wasteItemsArr = Object.values(wasteByItem).sort((a,b) => b.loss - a.loss).slice(0, 5);
+    document.getElementById("wasteByItem").innerHTML = wasteItemsArr.length
+      ? wasteItemsArr.map(w => `<tr>
+          <td>${w.name}</td>
+          <td class="num">${fmt.num(w.qty)} ${w.unit}</td>
+          <td class="num" style="color:var(--tomato)">${fmt.money(Math.round(w.loss))}</td>
+        </tr>`).join("")
+      : `<tr><td colspan="3" class="empty">無損耗記錄</td></tr>`;
+
+    const wasteByReason = {};
+    wastes.forEach(w => {
+      const r = w.reason || "未分類";
+      if (!wasteByReason[r]) wasteByReason[r] = { count: 0, loss: 0 };
+      wasteByReason[r].count += 1;
+      wasteByReason[r].loss  += Number(w.totalLoss) || 0;
+    });
+    const reasonArr = Object.entries(wasteByReason).sort((a,b) => b[1].loss - a[1].loss);
+    document.getElementById("wasteByReason").innerHTML = reasonArr.length
+      ? reasonArr.map(([r, v]) => `<tr>
+          <td>${r}</td>
+          <td class="num">${v.count}</td>
+          <td class="num" style="color:var(--tomato)">${fmt.money(Math.round(v.loss))}</td>
+        </tr>`).join("")
+      : `<tr><td colspan="3" class="empty">無損耗記錄</td></tr>`;
+
+    // By 經辦人（COGS 視角不變）
+    const userAgg = {};
+    sales.forEach(s => {
+      const u = s.handlerName || s.createdByName || "—";
+      if (!userAgg[u]) userAgg[u] = { cnt:0, rev:0, cost:0 };
+      const c = computeSaleCost(s, itemMap);
+      userAgg[u].cnt  += 1;
+      userAgg[u].rev  += s.total || 0;
+      userAgg[u].cost += c;
+    });
+    const userArr = Object.entries(userAgg).sort((a,b)=>b[1].rev-a[1].rev);
+    document.getElementById("byUser").innerHTML = userArr.length
+      ? userArr.map(([u,v]) => {
+          const profit = v.rev - v.cost;
+          return `<tr>
+            <td>${u}</td>
+            <td class="num">${v.cnt}</td>
+            <td class="num">${fmt.money(v.rev)}</td>
+            <td class="num">${fmt.money(Math.round(v.cost))}</td>
+            <td class="num">${fmt.money(Math.round(profit))}</td>
+            <td class="num">${fmt.money(Math.round(v.rev / v.cnt))}</td>
+          </tr>`;
+        }).join("")
+      : `<tr><td colspan="6" class="empty">無資料</td></tr>`;
+  }
+
+  document.getElementById("range").addEventListener("change", load);
+  document.getElementById("grain").addEventListener("change", load);
+  load();
+</script>
+</body>
+</html>

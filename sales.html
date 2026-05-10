@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>銷貨記錄 · 果果家 KOKOYA</title>
+<link rel="icon" href="assets/logo-fallback.svg">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<main class="container">
+
+  <!-- ========= 銷售統計表（最上面，3 層樹狀展開） ========= -->
+  <section class="card">
+    <div class="card-h">
+      <h2>📊 銷售統計表 <span class="muted" id="statsHint" style="font-size:.82rem;font-weight:400">點 ▸ 展開分類，再展開看品項與售出方式</span></h2>
+      <select class="select" id="statsMonth" style="width:160px">
+        <option value="">全部月份</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <table class="tb" id="statsTable">
+        <thead><tr><th style="width:34px"></th><th>分類 / 品項 / 售出方式</th><th class="num">售出量</th><th class="num">營收</th></tr></thead>
+        <tbody id="statsBody"><tr><td colspan="4" class="empty">載入中…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ========= 銷貨歷史 ========= -->
+  <section class="card" style="margin-top:18px">
+    <div class="card-h">
+      <h2>📒 銷貨歷史 <span class="muted" id="hCount" style="font-size:.82rem;font-weight:400"></span></h2>
+      <div class="flex" style="gap:8px;flex-wrap:wrap">
+        <select class="select" id="fMonth" style="width:140px"><option value="">全部月份</option></select>
+        <select class="select" id="fItem" style="width:160px"><option value="">全部品項</option></select>
+        <input class="input" id="kw" placeholder="🔍 搜尋客人/品項" style="width:180px">
+        <button class="btn primary" id="btnNewSale">＋ 新增銷貨單</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="tb">
+        <thead><tr><th>日期</th><th>單號</th><th>客人</th><th>品項</th><th class="num">合計</th><th>經辦</th><th></th></tr></thead>
+        <tbody id="rows"><tr><td colspan="7" class="empty">載入中…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ========= 新增/編輯銷貨單表單（預設隱藏） ========= -->
+  <section class="card hidden" id="formSection" style="margin-top:18px">
+    <div class="card-h">
+      <h2>🛒 新增銷貨單
+        <button type="button" class="btn ghost icon-only" id="btnHelp" title="操作說明" style="margin-left:8px;font-size:1rem">❓</button>
+      </h2>
+      <button type="button" class="btn ghost" id="btnCloseForm">✕ 關閉表單</button>
+    </div>
+    <form id="form" novalidate>
+      <div class="row-fields">
+        <div class="field"><label>銷售日期</label><input type="date" class="input" id="fDate" required></div>
+        <div class="field"><label>客人 / 對象</label><input class="input" id="fCustomer" placeholder="例：王太太、現場客人"></div>
+        <div class="field"><label>經辦人</label><select class="select" id="fHandler"></select></div>
+      </div>
+      <div id="editIndicator" class="hidden" style="margin:6px 0 10px;padding:8px 12px;background:#FFF6E6;border-left:3px solid var(--orange);border-radius:0 8px 8px 0;font-size:.9rem">
+        ✏️ 正在編輯：<b id="editCust"></b>
+        <button type="button" class="btn ghost" id="btnCancelEdit" style="margin-left:10px;padding:4px 10px;font-size:.78rem">取消編輯</button>
+      </div>
+
+      <h3 style="margin-top:6px">品項明細</h3>
+      <div id="lines"></div>
+      <button type="button" class="btn ghost" id="btnAddLine">＋ 新增一行</button>
+
+      <div class="field" style="margin-top:14px"><label>備註</label><textarea class="textarea" id="fNote" placeholder="例：宅配、自取、付現…"></textarea></div>
+
+      <div class="flex" style="justify-content:space-between;border-top:1px dashed var(--line);padding-top:14px;margin-top:8px">
+        <div class="muted">合計</div>
+        <div style="font-size:1.4rem;font-weight:700;color:var(--tomato)" id="total">$0</div>
+      </div>
+
+      <div class="flex" style="justify-content:flex-end;margin-top:14px">
+        <button type="reset" class="btn ghost" id="btnReset">清空</button>
+        <button type="submit" class="btn primary" id="btnSubmit">💾 儲存銷貨單</button>
+      </div>
+    </form>
+  </section>
+</main>
+
+<!-- 操作說明 modal -->
+<div class="modal-mask" id="helpModal">
+  <div class="modal">
+    <div class="card-h"><h2>📘 銷貨單操作說明</h2></div>
+    <ul style="padding-left:20px;color:var(--ink-2);line-height:1.95;margin:0 0 14px">
+      <li><b>1. 先選品項</b>：下拉只列品名與庫存</li>
+      <li><b>2. 再選銷售方式</b>：跳出該品項的售價組合（如「單顆 $25」、「4顆組 $100」、「7顆組 $200」）</li>
+      <li>選了銷售方式後，<b>數量與單價自動帶入</b>，仍可手動改</li>
+      <li>儲存後庫存 <b>自動扣除</b></li>
+      <li>沒看到的品項、或想加新的售價組合 → 去「🍎 品項清單」新增</li>
+      <li>當日/本月統計請看「📊 報表」頁</li>
+    </ul>
+    <div class="flex" style="justify-content:flex-end">
+      <button type="button" class="btn primary" id="btnHelpClose">了解</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { mountShell, toast, fmt, isAdmin } from "./js/app-shell.js";
+  import { listItems, addSale, listSales, deleteSale, updateSale, buildItemTierOptions, getLookups } from "./js/data.js";
+
+  const me = await mountShell({ active: "sales" });
+  const $lines = document.getElementById("lines");
+  const $form  = document.getElementById("form");
+  const $rows  = document.getElementById("rows");
+  const $kw    = document.getElementById("kw");
+  document.getElementById("fDate").value = fmt.dateInput(new Date());
+
+  // 從設定撈經辦人清單，填入下拉
+  const lookups = await getLookups().catch(() => ({ handlers: ["凱宇","凱帆","妍慧","于真"] }));
+  const handlerOpts = (lookups.handlers || []).map(n => `<option value="${n}">${n}</option>`).join("");
+  document.getElementById("fHandler").innerHTML = handlerOpts;
+  document.getElementById("fHandler").value = (lookups.handlers||[]).includes(me.name) ? me.name : (lookups.handlers||[])[0] || "";
+
+  let items = await listItems();
+  let salesCache = [];
+  let editingId = null;   // null = 新增模式；非 null = 編輯該銷貨單
+
+  function buildItemOptionsHTML() {
+    return items.map(i =>
+      `<option value="${i.id}" data-name="${i.name}" data-unit="${i.unit||''}">${i.name}（庫存 ${i.stock||0}${i.unit||''}）</option>`
+    ).join("");
+  }
+
+  function lineRow(idx) {
+    return `
+      <div class="row-fields line-row" data-idx="${idx}" style="margin-bottom:8px;align-items:end">
+        <div class="field" style="margin-bottom:0"><label>1. 品項</label>
+          <select class="select sl-item" required><option value="">請選擇</option>${buildItemOptionsHTML()}</select>
+        </div>
+        <div class="field" style="margin-bottom:0"><label>2. 銷售方式</label>
+          <select class="select sl-mode" required disabled><option value="">先選品項</option></select>
+        </div>
+        <div class="field" style="margin-bottom:0"><label>數量</label>
+          <input class="input sl-qty" type="number" min="1" step="1" value="1" required></div>
+        <div class="field" style="margin-bottom:0"><label>單價</label>
+          <input class="input sl-price" type="number" min="0" step="0.01" required></div>
+        <div class="field" style="margin-bottom:0"><label>小計</label>
+          <input class="input sl-sub" readonly tabindex="-1"></div>
+        <div><button type="button" class="btn ghost icon-only sl-del" title="移除">✕</button></div>
+      </div>`;
+  }
+  function addLine() {
+    const idx = $lines.children.length;
+    $lines.insertAdjacentHTML("beforeend", lineRow(idx));
+    bindRow($lines.lastElementChild);
+    recalc();
+  }
+  function bindRow(row) {
+    const slItem = row.querySelector(".sl-item");
+    const slMode = row.querySelector(".sl-mode");
+    const qty = row.querySelector(".sl-qty");
+    const price = row.querySelector(".sl-price");
+
+    // 選品項 → 重建「銷售方式」下拉
+    slItem.addEventListener("change", () => {
+      const itemId = slItem.value;
+      if (!itemId) {
+        slMode.innerHTML = `<option value="">先選品項</option>`;
+        slMode.disabled = true;
+        qty.value = 1;
+        price.value = "";
+        recalc();
+        return;
+      }
+      const item = items.find(i => i.id === itemId);
+      if (!item) return;
+      const tiers = buildItemTierOptions([item]);
+      slMode.innerHTML = `<option value="">請選擇</option>` + tiers.map(t =>
+        `<option value="${t.value}" data-qty="${t.qty}" data-unit-price="${t.unitPrice}">${t.label}　$${fmt.num(t.total)}</option>`
+      ).join("");
+      slMode.disabled = false;
+      // 自動選第一個（單{單位} 或第一個 tier），符合 80% 用戶意圖
+      if (tiers.length) {
+        slMode.value = tiers[0].value;
+        qty.value   = tiers[0].qty;
+        price.value = tiers[0].unitPrice;
+      }
+      recalc();
+    });
+
+    // 改銷售方式 → 重新帶入數量+單價
+    slMode.addEventListener("change", () => {
+      const opt = slMode.selectedOptions[0];
+      if (opt?.dataset.qty)       qty.value   = opt.dataset.qty;
+      if (opt?.dataset.unitPrice) price.value = opt.dataset.unitPrice;
+      recalc();
+    });
+
+    qty.addEventListener("input", recalc);
+    price.addEventListener("input", recalc);
+    row.querySelector(".sl-del").addEventListener("click", () => { row.remove(); recalc(); });
+  }
+  function recalc() {
+    let total = 0;
+    [...$lines.querySelectorAll(".line-row")].forEach(r => {
+      const q = Number(r.querySelector(".sl-qty").value)||0;
+      const p = Number(r.querySelector(".sl-price").value)||0;
+      r.querySelector(".sl-sub").value = (q*p).toLocaleString();
+      total += q*p;
+    });
+    document.getElementById("total").textContent = fmt.money(total);
+  }
+  document.getElementById("btnAddLine").addEventListener("click", addLine);
+  addLine();
+
+  $form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const lines = [...$lines.querySelectorAll(".line-row")].map(r => {
+      const sl  = r.querySelector(".sl-item");
+      const opt = sl.selectedOptions[0];
+      return {
+        itemId: sl.value,
+        name:   opt?.dataset.name || "",
+        qty:    Number(r.querySelector(".sl-qty").value)||0,
+        price:  Number(r.querySelector(".sl-price").value)||0
+      };
+    }).filter(l => l.itemId && l.qty > 0);
+    if (!lines.length) return toast("請至少加一個品項", "err");
+
+    const payload = {
+      date: new Date(document.getElementById("fDate").value),
+      customer: document.getElementById("fCustomer").value,
+      note: document.getElementById("fNote").value,
+      handlerName: document.getElementById("fHandler").value.trim() || me.name,
+      lines
+    };
+
+    try {
+      if (editingId) {
+        await updateSale(editingId, payload);
+        toast("✓ 銷貨單已更新（庫存已調整）", "ok");
+      } else {
+        await addSale(payload);
+        toast("✓ 銷貨單已儲存，庫存已扣除", "ok");
+      }
+      hideForm();
+      items = await listItems();
+      reload();
+    } catch (err) {
+      console.error(err);
+      toast((editingId ? "更新" : "儲存") + "失敗：" + err.message, "err");
+    }
+  });
+
+  // 進入編輯模式：把 sale 載入到 form
+  function enterEditMode(sale) {
+    editingId = sale.id;
+    document.getElementById("fDate").value = fmt.dateInput(sale.date);
+    document.getElementById("fCustomer").value = sale.customer || "";
+    document.getElementById("fHandler").value = sale.handlerName || sale.createdByName || me.name;
+    document.getElementById("fNote").value = sale.note || "";
+    // 重建 lines
+    $lines.innerHTML = "";
+    (sale.lines || []).forEach(l => {
+      addLine();
+      const row = $lines.lastElementChild;
+      const sl  = row.querySelector(".sl-item");
+      const slMode = row.querySelector(".sl-mode");
+      // 找到該品項
+      const found = items.find(i => i.id === l.itemId);
+      if (found) {
+        sl.value = l.itemId;
+        sl.dispatchEvent(new Event("change"));  // 觸發銷售方式重建
+      }
+      // 直接覆蓋 qty 和 price（用儲存的值，不從 tier 帶）
+      row.querySelector(".sl-qty").value = l.qty;
+      row.querySelector(".sl-price").value = l.price;
+      row.querySelector(".sl-qty").dispatchEvent(new Event("input"));
+    });
+    if (!sale.lines?.length) addLine();
+
+    document.getElementById("editIndicator").classList.remove("hidden");
+    document.getElementById("editCust").textContent = sale.customer || "(無客戶名)";
+    document.getElementById("btnSubmit").textContent = "💾 更新銷貨單";
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function exitEditMode() {
+    editingId = null;
+    document.getElementById("editIndicator").classList.add("hidden");
+    document.getElementById("btnSubmit").textContent = "💾 儲存銷貨單";
+  }
+
+  document.getElementById("btnCancelEdit").addEventListener("click", () => {
+    exitEditMode();
+    $form.reset();
+    document.getElementById("fDate").value = fmt.dateInput(new Date());
+    document.getElementById("fHandler").value = me.name;
+    $lines.innerHTML = ""; addLine();
+  });
+
+  document.getElementById("btnReset").addEventListener("click", () => {
+    setTimeout(() => {  // wait for native reset
+      document.getElementById("fDate").value = fmt.dateInput(new Date());
+      document.getElementById("fHandler").value = me.name;
+      $lines.innerHTML = ""; addLine();
+      exitEditMode();
+    }, 10);
+  });
+
+  async function reload() {
+    salesCache = await listSales({ days: null });   // 全部歷史
+    refreshFilters();
+    refreshStatsMonth();
+    renderStats();
+    render();
+  }
+
+  // ========= 銷售統計表 (3 層樹狀展開) =========
+  // 反推每筆 sale.line 用的 priceTier；無對應就視為「單{unit}」
+  function detectTier(line, item) {
+    const qty   = Number(line.qty)   || 0;
+    const price = Number(line.price) || 0;
+    const unit  = item?.unit || "件";
+    const tiers = Array.isArray(item?.priceTiers) ? item.priceTiers : [];
+    for (const t of tiers) {
+      const tq = Number(t.qty);
+      const tp = Number(t.price);
+      if (tq <= 0 || tp <= 0) continue;
+      const tierUnitPrice = tp / tq;
+      if (qty % tq === 0 && Math.abs(price - tierUnitPrice) < 1) {
+        const groups = qty / tq;
+        const label = t.label || `${tq}${unit}組`;
+        return { label, tierQty: tq, tierPrice: tp, groups };
+      }
+    }
+    return { label: `單${unit}`, tierQty: 1, tierPrice: price, groups: qty };
+  }
+
+  function refreshStatsMonth() {
+    const months = new Set();
+    salesCache.forEach(s => {
+      const d = s.date?.toDate ? s.date.toDate() : new Date(s.date);
+      if (!isNaN(d)) months.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`);
+    });
+    const sorted = [...months].sort().reverse();
+    const $sel = document.getElementById("statsMonth");
+    const cur = $sel.value;
+    $sel.innerHTML = `<option value="">全部月份</option>` +
+      sorted.map(m => `<option value="${m}">${m}</option>`).join("");
+    if (sorted.includes(cur)) $sel.value = cur;
+  }
+
+  function renderStats() {
+    const month = document.getElementById("statsMonth").value;
+    let list = salesCache;
+    if (month) {
+      list = list.filter(s => {
+        const d = s.date?.toDate ? s.date.toDate() : new Date(s.date);
+        return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}` === month;
+      });
+    }
+
+    const itemMap = Object.fromEntries(items.map(i => [i.id, i]));
+    // 三層樹：分類 → 品項 → 售出方式
+    const tree = {};   // { catName: { items: { itemId: { name, unit, qty, rev, tiers: { key: {label, qty, groups, rev} } } } } }
+    list.forEach(s => (s.lines || []).forEach(l => {
+      const item = itemMap[l.itemId];
+      const cat  = item?.category || "未分類";
+      const itemId = l.itemId || `__name__${l.name||"未知"}`;
+      const name = item?.name || l.name || "(已刪除品項)";
+      const unit = item?.unit || "";
+      const lineRev = Number(l.lineTotal) || (Number(l.qty)*Number(l.price)) || 0;
+
+      if (!tree[cat]) tree[cat] = { qty: 0, rev: 0, items: {} };
+      if (!tree[cat].items[itemId]) tree[cat].items[itemId] = { name, unit, qty: 0, rev: 0, tiers: {} };
+
+      tree[cat].qty += Number(l.qty) || 0;
+      tree[cat].rev += lineRev;
+      tree[cat].items[itemId].qty += Number(l.qty) || 0;
+      tree[cat].items[itemId].rev += lineRev;
+
+      const tier = detectTier(l, item);
+      const tk = `${tier.label}@${tier.tierPrice}`;
+      if (!tree[cat].items[itemId].tiers[tk]) {
+        tree[cat].items[itemId].tiers[tk] = { label: tier.label, tierPrice: tier.tierPrice, groups: 0, totalQty: 0, rev: 0 };
+      }
+      tree[cat].items[itemId].tiers[tk].groups += tier.groups;
+      tree[cat].items[itemId].tiers[tk].totalQty += Number(l.qty) || 0;
+      tree[cat].items[itemId].tiers[tk].rev += lineRev;
+    }));
+
+    const $body = document.getElementById("statsBody");
+    const cats = Object.entries(tree).sort((a,b) => b[1].rev - a[1].rev);
+    if (!cats.length) {
+      $body.innerHTML = `<tr><td colspan="4" class="empty">${month ? `${month} 沒有銷售紀錄` : "尚無銷售紀錄"}</td></tr>`;
+      return;
+    }
+    let html = "";
+    cats.forEach((catEntry, ci) => {
+      const [catName, catData] = catEntry;
+      const catId = `cat-${ci}`;
+      html += `<tr class="stats-cat" data-toggle="${catId}" style="cursor:pointer;background:#FFF6E6">
+        <td><span class="exp-arrow">▸</span></td>
+        <td><b>📦 ${catName}</b></td>
+        <td class="num"><b>${fmt.num(catData.qty)}</b></td>
+        <td class="num"><b>${fmt.money(catData.rev)}</b></td>
+      </tr>`;
+      const itemsArr = Object.entries(catData.items).sort((a,b) => b[1].rev - a[1].rev);
+      itemsArr.forEach(([iid, idata], ii) => {
+        const itemId = `${catId}-i${ii}`;
+        html += `<tr class="stats-item child-of-${catId}" data-toggle="${itemId}" style="cursor:pointer;display:none">
+          <td></td>
+          <td style="padding-left:30px">▸ ${idata.name}</td>
+          <td class="num">${fmt.num(idata.qty)} ${idata.unit||""}</td>
+          <td class="num">${fmt.money(idata.rev)}</td>
+        </tr>`;
+        const tiersArr = Object.values(idata.tiers).sort((a,b) => b.rev - a.rev);
+        tiersArr.forEach(t => {
+          html += `<tr class="stats-tier child-of-${catId} child-of-${itemId}" style="display:none;color:var(--ink-3)">
+            <td></td>
+            <td style="padding-left:60px;font-size:.88rem">└ ${t.label}（單價 ${fmt.money(Math.round(t.tierPrice))}）</td>
+            <td class="num" style="font-size:.88rem">${fmt.num(t.groups)} 組 / ${fmt.num(t.totalQty)} ${idata.unit||""}</td>
+            <td class="num" style="font-size:.88rem">${fmt.money(t.rev)}</td>
+          </tr>`;
+        });
+      });
+    });
+    $body.innerHTML = html;
+
+    // 點擊展開
+    $body.querySelectorAll("[data-toggle]").forEach(tr => {
+      tr.addEventListener("click", () => {
+        const tid = tr.dataset.toggle;
+        const open = tr.classList.toggle("open");
+        const arrow = tr.querySelector(".exp-arrow");
+        if (arrow) arrow.textContent = open ? "▾" : "▸";
+        else {
+          // item 列：把開頭的 ▸ 換 ▾
+          const tdName = tr.cells[1];
+          if (tdName) tdName.innerHTML = tdName.innerHTML.replace(/^▸ |^▾ /, open ? "▾ " : "▸ ");
+        }
+        // 處理子元素顯示
+        if (tid.includes("-i")) {
+          // 是 item 列 → 切 tier
+          $body.querySelectorAll(`.child-of-${tid}`).forEach(sub => sub.style.display = open ? "" : "none");
+        } else {
+          // 是 cat 列 → 切 item，但 tier 都收起來
+          $body.querySelectorAll(`.child-of-${tid}`).forEach(sub => {
+            if (sub.classList.contains("stats-tier")) {
+              sub.style.display = "none";
+            } else {
+              sub.style.display = open ? "" : "none";
+              sub.classList.remove("open");
+              const tdName = sub.cells[1];
+              if (tdName) tdName.innerHTML = tdName.innerHTML.replace(/^▾ /, "▸ ");
+            }
+          });
+        }
+      });
+    });
+  }
+  // statsMonth 變動 → 重新渲染統計
+  document.getElementById("statsMonth").addEventListener("change", renderStats);
+
+  // ========= 表單顯示/隱藏 =========
+  const $formSection = document.getElementById("formSection");
+  function showForm() {
+    $formSection.classList.remove("hidden");
+    setTimeout(() => $formSection.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  }
+  function hideForm() {
+    $formSection.classList.add("hidden");
+    exitEditMode();
+    $form.reset();
+    document.getElementById("fDate").value = fmt.dateInput(new Date());
+    document.getElementById("fHandler").value = me.name;
+    $lines.innerHTML = ""; addLine();
+  }
+  document.getElementById("btnNewSale").addEventListener("click", showForm);
+  document.getElementById("btnCloseForm").addEventListener("click", hideForm);
+
+  // 從 cache 動態抓出有資料的月份/品項，組成下拉選項
+  function refreshFilters() {
+    // 月份（依資料）
+    const months = new Set();
+    salesCache.forEach(s => {
+      const d = s.date?.toDate ? s.date.toDate() : new Date(s.date);
+      months.add(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`);
+    });
+    const sortedMonths = [...months].sort().reverse();
+    const $fMonth = document.getElementById("fMonth");
+    const curMonth = $fMonth.value;
+    $fMonth.innerHTML = `<option value="">全部月份</option>` +
+      sortedMonths.map(m => `<option value="${m}">${m}</option>`).join("");
+    if (sortedMonths.includes(curMonth)) $fMonth.value = curMonth;
+
+    // 品項（依銷貨資料中出現的品項）
+    const itemMap = new Map();
+    salesCache.forEach(s => (s.lines||[]).forEach(l => {
+      if (l.itemId) {
+        const cur = items.find(i => i.id === l.itemId)?.name || l.name || "(已刪除品項)";
+        itemMap.set(l.itemId, cur);
+      }
+    }));
+    const sortedItems = [...itemMap.entries()].sort((a,b) => (a[1]||"").localeCompare(b[1]||"", "zh-Hant"));
+    const $fItem = document.getElementById("fItem");
+    const curItem = $fItem.value;
+    $fItem.innerHTML = `<option value="">全部品項</option>` +
+      sortedItems.map(([id, name]) => `<option value="${id}">${name}</option>`).join("");
+    if (sortedItems.some(([id]) => id === curItem)) $fItem.value = curItem;
+  }
+
+  function render() {
+    const kw = $kw.value.trim();
+    const month  = document.getElementById("fMonth").value;
+    const itemId = document.getElementById("fItem").value;
+    let list = salesCache;
+    if (month) {
+      list = list.filter(s => {
+        const d = s.date?.toDate ? s.date.toDate() : new Date(s.date);
+        const ym = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+        return ym === month;
+      });
+    }
+    if (itemId) {
+      list = list.filter(s => (s.lines||[]).some(l => l.itemId === itemId));
+    }
+    if (kw) list = list.filter(s => (s.customer||"").includes(kw)
+      || (s.lines||[]).some(l => (l.name||"").includes(kw)));
+
+    const totalAmt = list.reduce((a,b)=>a+(b.total||0), 0);
+    document.getElementById("hCount").textContent = list.length
+      ? `· ${list.length} 筆 · 共 ${fmt.money(totalAmt)}`
+      : "";
+
+    if (!list.length) {
+      $rows.innerHTML = `<tr><td colspan="7" class="empty">無符合條件的銷貨</td></tr>`;
+      return;
+    }
+    $rows.innerHTML = list.map(s => `
+      <tr>
+        <td>${fmt.date(s.date)}</td>
+        <td class="muted">${s.id.slice(0,6)}</td>
+        <td>${s.customer || "—"}</td>
+        <td>${(s.lines||[]).map(l=>`${l.name}×${l.qty}`).join("、")}</td>
+        <td class="num"><b>${fmt.money(s.total)}</b></td>
+        <td>${s.handlerName || s.createdByName || "—"}</td>
+        <td class="right flex" style="justify-content:flex-end;gap:4px">
+          <button class="btn ghost icon-only" data-edit="${s.id}" title="編輯改單">✎</button>
+          ${isAdmin(me.email) ? `<button class="btn ghost icon-only" data-del="${s.id}" title="刪除（會反扣庫存）">🗑</button>` : ""}
+        </td>
+      </tr>`).join("");
+  }
+  $kw.addEventListener("input", render);
+  document.getElementById("fMonth").addEventListener("change", render);
+  document.getElementById("fItem").addEventListener("change", render);
+  $rows.addEventListener("click", async e => {
+    const editId = e.target.closest("[data-edit]")?.dataset.edit;
+    const delId  = e.target.closest("[data-del]")?.dataset.del;
+    if (editId) {
+      const sale = salesCache.find(s => s.id === editId);
+      if (sale) { showForm(); enterEditMode(sale); }
+      else toast("找不到該筆銷貨單，請重整", "err");
+      return;
+    }
+    if (delId && confirm("刪除這筆銷貨單？庫存會自動加回去。")) {
+      try {
+        await deleteSale(delId);
+        toast("已刪除", "ok");
+        if (editingId === delId) exitEditMode();
+        items = await listItems();
+        reload();
+      } catch (err) { toast(err.message, "err"); }
+    }
+  });
+
+  // 操作說明 modal
+  const $helpModal = document.getElementById("helpModal");
+  document.getElementById("btnHelp").addEventListener("click", () => $helpModal.classList.add("show"));
+  document.getElementById("btnHelpClose").addEventListener("click", () => $helpModal.classList.remove("show"));
+  $helpModal.addEventListener("click", e => { if (e.target === $helpModal) $helpModal.classList.remove("show"); });
+
+  reload();
+</script>
+</body>
+</html>
